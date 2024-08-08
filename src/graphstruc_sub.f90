@@ -47,8 +47,26 @@ contains
     type(graph_type) :: output
     !! Initialised graph.
 
+    ! Local variables
+    integer :: i
+    !! Loop index.
+
     output%num_vertices = size(vertex, dim=1)
     output%num_edges = size(edge, dim=1)
+    output%num_vertex_features = size(vertex(1)%feature, dim=1)
+    do i = 1, output%num_vertices
+       if(size(vertex(i)%feature, dim=1) .ne. output%num_vertex_features)then
+          write(0,*) 'ERROR: Number of vertex features do not match'
+          stop "Exiting..."
+       end if
+    end do
+    output%num_edge_features = size(edge(1)%feature, dim=1)
+    do i = 1, output%num_edges
+       if(size(edge(i)%feature, dim=1) .ne. output%num_edge_features)then
+          write(0,*) 'ERROR: Number of edge indices do not match'
+          stop "Exiting..."
+       end if
+    end do
     output%directed = .false.
     if(present(directed)) output%directed = directed
     if(present(name)) output%name = name
@@ -88,6 +106,20 @@ contains
     end if
     if(present(vertex)) vertex_ = vertex
     if(present(feature)) vertex_%feature = feature
+
+    if(.not.allocated(vertex_%feature))then
+       allocate( &
+            vertex_%feature(this%num_vertex_features), &
+            source = 0.0_real32&
+       )
+    else if(this%num_vertex_features.eq.0)then
+       this%num_vertex_features = size(vertex_%feature, dim=1)
+    else if(size(vertex_%feature, dim=1).ne.this%num_vertex_features)then
+       write(0,*) 'ERROR: Number of vertex features do not match'
+       stop "Exiting..."
+    end if
+
+
     this%num_vertices = this%num_vertices + 1
     this%vertex = [this%vertex, vertex_]
     call this%generate_adjacency()
@@ -157,7 +189,20 @@ contains
              edge_ = edge_type_init(index, weight_, directed=directed_)
           end if
        end if
-      end if
+    end if
+
+    if(.not.allocated(edge_%feature))then
+       allocate( &
+            edge_%feature(this%num_edge_features), &
+            source = 0.0_real32&
+       )
+    else if(this%num_edge_features.eq.0)then
+       this%num_edge_features = size(edge_%feature, dim=1)
+    else if(size(edge_%feature, dim=1).ne.this%num_edge_features)then
+       write(0,*) 'ERROR: Number of edge features do not match'
+       stop "Exiting..."
+    end if
+
 
     this%num_edges = this%num_edges + 1
     this%edge = [this%edge, edge_]
@@ -169,6 +214,30 @@ contains
             this%vertex(abs(edge_%index(2)))%degree + 1
 
   end subroutine add_edge
+
+
+  module subroutine set_num_vertices(this, num_vertices, num_vertex_features)
+    !! Set the number of vertices of the graph.
+    !!
+    !! This will deallocate the existing vertices and edges
+    !! and set the number of vertices.
+    !! New vertices will be allocated but not initialised.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, intent(in) :: num_vertices
+    !! Number of vertices in the graph.
+    integer, intent(in), optional :: num_vertex_features
+
+    if(allocated(this%vertex)) deallocate(this%vertex)
+    if(allocated(this%edge)) deallocate(this%edge)
+    this%num_vertices = num_vertices
+    if(present(num_vertex_features)) &
+         this%num_vertex_features = num_vertex_features
+    allocate(this%vertex(num_vertices))
+  end subroutine set_num_vertices
 
 
   module subroutine set_edges(this, vertex_index, connected_indices)
@@ -199,6 +268,108 @@ contains
   end subroutine set_edges
 
 
+  module subroutine remove_vertices(this, indices)
+    !! Remove vertices from the graph.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, dimension(:), intent(in) :: indices
+    !! Indices of the vertices to be removed.
+
+    ! Local variables
+    integer :: i, j, k
+    !! Loop indices.
+    integer, dimension(size(indices, dim=1)) :: vertex_indices
+    !! Indices of the vertices to be removed.
+    integer, dimension(:), allocatable :: edge_indices
+    !! Indices of the edges to be removed.
+
+    allocate(edge_indices(0))
+    do i = 1, size(indices, dim=1)
+      do j = 1, this%num_edges
+        if( &
+             any(this%edge(j)%index .eq. indices(i)) .or. &
+             any(this%edge(j)%index .eq. -indices(i)) &
+        ) &
+             edge_indices = [edge_indices, j]
+      end do
+    end do
+    if(size(edge_indices, dim=1) .gt. 0) &
+         call this%remove_edges(edge_indices, update_adjacency=.false.)
+
+    vertex_indices = indices
+    do i = 1, size(indices, dim=1)
+       k = maxval(vertex_indices, dim = 1)
+       this%vertex = [ &
+           this%vertex(1:k-1:1), &
+           this%vertex(k+1:this%num_vertices:1) &
+       ]
+       this%num_vertices = this%num_vertices - 1
+       vertex_indices(maxloc(vertex_indices, dim = 1)) = 0
+       do j = 1, this%num_edges
+          if(this%edge(j)%index(1).gt.k)then
+             this%edge(j)%index(1) = this%edge(j)%index(1) - 1
+          elseif(this%edge(j)%index(1).lt.-k)then
+             this%edge(j)%index(1) = this%edge(j)%index(1) + 1
+          end if
+          if(this%edge(j)%index(2).gt.k)then
+             this%edge(j)%index(2) = this%edge(j)%index(2) - 1
+          elseif(this%edge(j)%index(2).lt.-k)then
+             this%edge(j)%index(2) = this%edge(j)%index(2) + 1
+          end if
+       end do
+    end do
+    call this%generate_adjacency()
+  end subroutine remove_vertices
+
+
+  module subroutine remove_edges(this, indices, update_adjacency)
+    !! Remove edges from the graph.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, dimension(:), intent(in) :: indices
+    !! Indices of the edges to be removed.
+    logical, intent(in), optional :: update_adjacency
+    !! Boolean whether to update the adjacency matrix. Default is True.
+
+    ! Local variables
+    integer :: i, k
+    !! Loop indices.
+    logical :: update_adjacency_ = .true.
+    !! Boolean whether to update the adjacency matrix.
+    integer, dimension(size(indices, dim=1)) :: edge_indices
+    !! Indices of the vertices to be removed.
+
+    if(present(update_adjacency)) update_adjacency_ = update_adjacency
+
+    edge_indices = indices
+    do i = 1, size(indices, dim=1)
+       k = maxval(edge_indices, dim = 1)
+       this%vertex(this%edge(k)%index(1))%degree = &
+            this%vertex(this%edge(k)%index(1))%degree - 1
+       if(.not.this%directed)then
+          this%vertex(abs(this%edge(k)%index(2)))%degree = &
+               this%vertex(abs(this%edge(k)%index(2)))%degree - 1
+       else if(this%edge(k)%index(2).gt.0)then
+          this%vertex(this%edge(k)%index(2))%degree = &
+               this%vertex(this%edge(k)%index(2))%degree - 1
+       end if
+       this%edge = [ &
+            this%edge(1:k-1:1), &
+            this%edge(k+1:this%num_edges:1) &
+       ]
+       this%num_edges = this%num_edges - 1
+       edge_indices(maxloc(edge_indices, dim = 1)) = 0
+      end do
+    if(update_adjacency_) call this%generate_adjacency()
+  end subroutine remove_edges
+
+
   module subroutine calculate_degree(this)
     !! Calculate the degree of the vertices in the graph.
     implicit none
@@ -213,10 +384,10 @@ contains
 
     this%vertex(:)%degree = 0
     do i = 1, this%num_vertices
-      do j = 1, this%num_vertices, 1
-        if(this%adjacency(i,j) .gt. 0) &
-             this%vertex(i)%degree = this%vertex(i)%degree + 1
-      end do
+       do j = 1, this%num_vertices, 1
+          if(this%adjacency(i,j) .gt. 0) &
+               this%vertex(i)%degree = this%vertex(i)%degree + 1
+       end do
     end do
   end subroutine calculate_degree
 
@@ -235,14 +406,14 @@ contains
     allocate(this%adjacency(this%num_vertices, this%num_vertices))
     this%adjacency = 0
     do k = 1, this%num_edges
-      i = this%edge(k)%index(1)
-      j = this%edge(k)%index(2)
-      if(this%directed.and.j.lt.0) then
-        this%adjacency(i,abs(j)) = k
-      else
-        this%adjacency(i,j) = k
-        this%adjacency(j,i) = k
-      end if
+       i = this%edge(k)%index(1)
+       j = this%edge(k)%index(2)
+       if(this%directed.and.j.lt.0) then
+          this%adjacency(i,abs(j)) = k
+       else
+          this%adjacency(i,j) = k
+          this%adjacency(j,i) = k
+       end if
     end do
   end subroutine generate_adjacency
   

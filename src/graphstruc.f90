@@ -47,7 +47,7 @@ module graphstruc
      !! Boolean whether the graph is directed.
      integer :: num_vertices, num_edges
      !! Number of vertices and edges in the graph.
-     integer :: num_vertex_features, num_edge_features
+     integer :: num_vertex_features = 0, num_edge_features = 0
      !! Number of features for vertices and edges.
      character(len=128) :: name
      !! Name of the graph.
@@ -67,8 +67,14 @@ module graphstruc
      !! Procedure to add a vertex to the graph.
      procedure, pass(this) :: add_edge
      !! Procedure to add an edge to the graph.
+     procedure, pass(this) :: set_num_vertices
+     !! Procedure to set the number of vertices in the graph.
      procedure, pass(this) :: set_edges
      !! Procedure to set the edges of the graph.
+     procedure, pass(this) :: remove_vertices
+     !! Procedure to remove a vertex from the graph.
+     procedure, pass(this) :: remove_edges
+     !! Procedure to remove an edge from the graph.
      procedure, pass(this) :: calculate_degree
      !! Procedure to calculate the degree of the vertices.
      procedure, pass(this) :: generate_adjacency
@@ -144,6 +150,21 @@ module graphstruc
       !! Boolean whether the edge is directed. Default is False.
     end subroutine add_edge
 
+    module subroutine set_num_vertices(this, num_vertices, num_vertex_features)
+      !! Interface for setting the number of vertices of the graph.
+      !!
+      !! This will deallocate the existing vertices and edges
+      !! and set the number of vertices.
+      !! New vertices will be allocated but not initialised.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+      integer, intent(in) :: num_vertices
+      !! Number of vertices in the graph.
+      integer, intent(in), optional :: num_vertex_features
+      !! Number of features for the vertices. Default is 0.
+    end subroutine set_num_vertices
+
     module subroutine set_edges(this, vertex_index, connected_indices)
       !! Interface for setting the edges of the graph.
       !!
@@ -159,6 +180,30 @@ module graphstruc
       integer, dimension(:), intent(in) :: connected_indices
       !! Indices of the connected vertices.
     end subroutine set_edges
+
+    module subroutine remove_vertices(this, indices)
+      !! Interface for removing vertices from the graph.
+      !!
+      !! This will deallocate the vertex and edges connected to the vertices.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+      integer, dimension(:), intent(in) :: indices
+      !! Indices of the vertices to be removed.
+    end subroutine remove_vertices
+
+    module subroutine remove_edges(this, indices, update_adjacency)
+      !! Interface for removing edges from the graph.
+      !!
+      !! This will deallocate the edges.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+      integer, dimension(:), intent(in) :: indices
+      !! Indices of the edges to be removed.
+      logical, intent(in), optional :: update_adjacency
+      !! Boolean whether to update the adjacency matrix. Default is True.
+    end subroutine remove_edges
 
     module subroutine calculate_degree(this)
       !! Interface for calculating the degree of the vertices.
