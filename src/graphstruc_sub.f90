@@ -64,6 +64,8 @@ contains
   module subroutine add_vertex(this, vertex, feature)
     !! Add a vertex to the graph.
     implicit none
+
+    ! Arguments
     class(graph_type), intent(inout) :: this
     !! Parent. Instance of the graph structure.
     type(vertex_type), intent(in), optional :: vertex
@@ -144,7 +146,11 @@ contains
           stop "Exiting..."
        else
           if(present(weight)) weight_ = weight
-          if(present(directed)) directed_ = directed
+          if(present(directed))then
+             directed_ = directed
+          else
+             if(any(index .lt. 0)) directed_ = .true.
+          end if
           if(present(feature)) then
              edge_ = edge_type_init(index, weight_, feature, directed_)
           else
@@ -159,10 +165,38 @@ contains
 
     this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
     if(.not.directed_) &
-       this%vertex(edge_%index(2))%degree = &
-            this%vertex(edge_%index(2))%degree + 1
+       this%vertex(abs(edge_%index(2)))%degree = &
+            this%vertex(abs(edge_%index(2)))%degree + 1
 
   end subroutine add_edge
+
+
+  module subroutine set_edges(this, vertex_index, connected_indices)
+    !! Add edge connections between vertices of the graph.
+    implicit none
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, intent(in) :: vertex_index
+    !! Index of the vertex.
+    integer, dimension(:), intent(in) :: connected_indices
+    !! Indices of the connected vertices.
+
+    ! Local variables
+    integer :: i
+    !! Loop index.
+    logical :: directed
+    !! Boolean whether the edge is directed.
+
+
+    do i = 1, size(connected_indices, dim=1)
+      directed = .false.
+      if(connected_indices(i).lt.0) directed = .true.
+      call this%add_edge( &
+           index=[vertex_index, connected_indices(i)], &
+           directed=directed &
+      )
+    end do
+  end subroutine set_edges
 
 
   module subroutine calculate_degree(this)

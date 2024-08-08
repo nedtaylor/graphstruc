@@ -96,6 +96,7 @@ program test_graph
      success = .false.
   end if
 
+
   !-----------------------------------------------------------------------------
   ! test add_edge
   !-----------------------------------------------------------------------------
@@ -110,6 +111,38 @@ program test_graph
   end if
   if(size(graph%edge,dim=1).ne.2)then
      write(0,*) 'Graph add_edge failed for edge'
+     success = .false.
+  end if
+
+  !-----------------------------------------------------------------------------
+  ! test set_edges
+  !-----------------------------------------------------------------------------
+  call graph%set_edges(1, [ -3, 4 ])
+  if(graph%num_edges .ne. 4)then
+     write(0,*) 'Graph set_edges failed for num_edges'
+     success = .false.
+  end if
+  if(size(graph%edge,dim=1).ne.4)then
+     write(0,*) 'Graph set_edges failed for edge'
+     success = .false.
+  end if
+  if(graph%vertex(1)%degree .ne. 4)then
+     write(0,*) 'Graph set_edges failed for vertex degree of vertex 1'
+     write(0,*) graph%vertex(1)%degree
+     success = .false.
+  end if
+  if(graph%vertex(3)%degree .ne. 1)then
+     write(0,*) 'Graph set_edges failed for vertex degree of vertex 3'
+     write(0,*) graph%vertex(3)%degree
+     success = .false.
+  end if
+  if(graph%vertex(4)%degree .ne. 1)then
+     write(0,*) 'Graph set_edges failed for vertex degree of vertex 4'
+     write(0,*) graph%vertex(4)%degree
+     success = .false.
+  end if
+  if(graph%adjacency(1,3) .ne. 3)then
+     write(0,*) 'Graph set_edges failed for adjacency'
      success = .false.
   end if
 

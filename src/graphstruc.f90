@@ -67,6 +67,8 @@ module graphstruc
      !! Procedure to add a vertex to the graph.
      procedure, pass(this) :: add_edge
      !! Procedure to add an edge to the graph.
+     procedure, pass(this) :: set_edges
+     !! Procedure to set the edges of the graph.
      procedure, pass(this) :: calculate_degree
      !! Procedure to calculate the degree of the vertices.
      procedure, pass(this) :: generate_adjacency
@@ -141,6 +143,22 @@ module graphstruc
       logical, intent(in), optional :: directed
       !! Boolean whether the edge is directed. Default is False.
     end subroutine add_edge
+
+    module subroutine set_edges(this, vertex_index, connected_indices)
+      !! Interface for setting the edges of the graph.
+      !!
+      !! Negative indicies in connected_indices define directional edge from
+      !! vertex_index to -connected_index.
+      !! Positive indicies in connected_indices define undirected edge between
+      !! vertex_index and connected_index.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+      integer, intent(in) :: vertex_index
+      !! Index of the vertex.
+      integer, dimension(:), intent(in) :: connected_indices
+      !! Indices of the connected vertices.
+    end subroutine set_edges
 
     module subroutine calculate_degree(this)
       !! Interface for calculating the degree of the vertices.
