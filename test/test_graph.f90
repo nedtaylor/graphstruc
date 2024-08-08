@@ -5,8 +5,6 @@ program test_graph
   implicit none
 
   class(graph_type), allocatable :: graph
-  type(vertex_type), dimension(:), allocatable :: vertex
-  type(edge_type), dimension(:), allocatable :: edge
 
   logical :: success = .true.
 
@@ -15,8 +13,8 @@ program test_graph
   ! test graph
   !-----------------------------------------------------------------------------
   graph = graph_type( &
-       vertices = [ vertex_type(), vertex_type() ], &
-       edges = [ edge_type( &
+       vertex = [ vertex_type(), vertex_type() ], &
+       edge = [ edge_type( &
             index = [1, 2], weight = 2.0, &
             feature = [ 1.0, 2.0, 3.0 ], &
             directed = .false. &
@@ -62,7 +60,58 @@ program test_graph
   if(graph%adjacency(2,1) .ne. 0)then
     write(0,*) 'Graph update failed for directed adjacency'
     success = .false.
- end if
+  end if
+
+
+  !-----------------------------------------------------------------------------
+  ! test add_vertex
+  !-----------------------------------------------------------------------------
+  call graph%add_vertex(vertex = vertex_type( &
+       feature = [ 1.0, 2.0, 3.0 ] &
+  ))
+  if(graph%num_vertices .ne. 3)then
+     write(0,*) 'Graph add_vertex failed for num_vertices'
+     success = .false.
+  end if
+  if(size(graph%vertex,dim=1).ne.3)then
+     write(0,*) 'Graph add_vertex failed for vertex'
+     success = .false.
+  end if
+  if(size(graph%vertex(3)%feature,dim=1).ne.3)then
+     write(0,*) 'Graph add_vertex failed for vertex feature'
+     success = .false.
+  end if
+  call graph%add_vertex(feature=[ 3.0, 2.0 ])
+  if(graph%num_vertices .ne. 4)then
+     write(0,*) 'Graph add_vertex failed for num_vertices'
+     success = .false.
+  end if
+  if(size(graph%vertex,dim=1).ne.4)then
+     write(0,*) 'Graph add_vertex failed for vertex'
+     success = .false.
+  end if
+
+  if(size(graph%vertex(4)%feature,dim=1).ne.2)then
+     write(0,*) 'Graph add_vertex failed for vertex'
+     success = .false.
+  end if
+
+  !-----------------------------------------------------------------------------
+  ! test add_edge
+  !-----------------------------------------------------------------------------
+  call graph%add_edge(edge = edge_type( &
+       index = [1, 3], weight = 2.0, &
+       feature = [ 1.0, 2.0, 3.0 ], &
+       directed = .false. &
+  ))
+  if(graph%num_edges .ne. 2)then
+     write(0,*) 'Graph add_edge failed for num_edges'
+     success = .false.
+  end if
+  if(size(graph%edge,dim=1).ne.2)then
+     write(0,*) 'Graph add_edge failed for edge'
+     success = .false.
+  end if
 
 
   !-----------------------------------------------------------------------------

@@ -63,6 +63,8 @@ module graphstruc
      type(edge_type), dimension(:), allocatable :: edge
      !! Array of edges in the graph.
    contains
+     procedure, pass(this) :: add_vertex
+     !! Procedure to add a vertex to the graph.
      procedure, pass(this) :: add_edge
      !! Procedure to add an edge to the graph.
      procedure, pass(this) :: calculate_degree
@@ -92,15 +94,15 @@ module graphstruc
   end interface edge_type
 
   interface graph_type
-    module function graph_type_init(vertices, edges, name, directed) &
+    module function graph_type_init(vertex, edge, name, directed) &
          result(output)
       !! Interface for initialising a graph.
       implicit none
 
       ! Arguments
-      type(vertex_type), dimension(:), intent(in) :: vertices
+      type(vertex_type), dimension(:), intent(in) :: vertex
       !! Vertices in the graph.
-      type(edge_type), dimension(:), intent(in) :: edges
+      type(edge_type), dimension(:), intent(in) :: edge
       !! Edges in the graph.
       character(len=128), intent(in), optional :: name
       !! Name of the graph.
@@ -112,12 +114,25 @@ module graphstruc
   end interface graph_type
 
   interface
-    module subroutine add_edge(this, index, weight, feature, directed)
+    module subroutine add_vertex(this, vertex, feature)
+      !! Interface for adding a vertex to the graph.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+      type(vertex_type), intent(in), optional :: vertex
+      !! Vertex to be added.
+      real(real32), dimension(:), intent(in), optional :: feature
+      !! Feature vector of the vertex.
+    end subroutine add_vertex
+
+    module subroutine add_edge(this, edge, index, weight, feature, directed)
       !! Interface for adding an edge to the graph.
       implicit none
       class(graph_type), intent(inout) :: this
       !! Parent. Instance of the graph structure.
-      integer, dimension(2), intent(in) :: index
+      type(edge_type), intent(in), optional :: edge
+      !! Edge to be added.
+      integer, dimension(2), optional, intent(in) :: index
       !! Vertex indices of the edge.
       real(real32), intent(in), optional :: weight
       !! Weight of the edge.

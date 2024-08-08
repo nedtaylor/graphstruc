@@ -30,15 +30,15 @@ contains
   end function edge_type_init
 
 
-  module function graph_type_init(vertices, edges, name, directed) &
+  module function graph_type_init(vertex, edge, name, directed) &
        result(output)
     !! Interface for initialising a graph.
     implicit none
 
     ! Arguments
-    type(vertex_type), dimension(:), intent(in) :: vertices
+    type(vertex_type), dimension(:), intent(in) :: vertex
     !! Vertices in the graph.
-    type(edge_type), dimension(:), intent(in) :: edges
+    type(edge_type), dimension(:), intent(in) :: edge
     !! Edges in the graph.
     character(len=128), intent(in), optional :: name
     !! Name of the graph.
@@ -47,26 +47,61 @@ contains
     type(graph_type) :: output
     !! Initialised graph.
 
-    output%num_vertices = size(vertices, dim=1)
-    output%num_edges = size(edges, dim=1)
+    output%num_vertices = size(vertex, dim=1)
+    output%num_edges = size(edge, dim=1)
     output%directed = .false.
     if(present(directed)) output%directed = directed
     if(present(name)) output%name = name
-    output%vertex = vertices
-    output%edge = edges
+    allocate(output%vertex(output%num_vertices))
+    allocate(output%edge(output%num_edges))
+    output%vertex = vertex
+    output%edge = edge
     call output%generate_adjacency()
     call output%calculate_degree()
   end function graph_type_init
 
 
-  module subroutine add_edge(this, index, weight, feature, directed)
-    !! Interface for adding an edge to the graph.
+  module subroutine add_vertex(this, vertex, feature)
+    !! Add a vertex to the graph.
+    implicit none
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    type(vertex_type), intent(in), optional :: vertex
+    !! Vertex to be added.
+    real(real32), dimension(:), intent(in), optional :: feature
+    !! Feature vector of the vertex.
+
+    ! Local variables
+    type(vertex_type) :: vertex_
+    !! Initialised vertex.
+
+
+    if(present(vertex).and.present(feature))then
+       write(0,*) 'ERROR: Both vertex and feature are present where only one &
+            &should be defined'
+       stop "Exiting..."
+    elseif(.not.present(vertex).and..not.present(feature))then
+       write(0,*) 'ERROR: Neither vertex nor feature are present'
+        stop "Exiting..."
+    end if
+    if(present(vertex)) vertex_ = vertex
+    if(present(feature)) vertex_%feature = feature
+    this%num_vertices = this%num_vertices + 1
+    this%vertex = [this%vertex, vertex_]
+    call this%generate_adjacency()
+  end subroutine add_vertex
+
+
+  module subroutine add_edge(this, edge, index, weight, feature, directed)
+    !! Add an edge to the graph.
     implicit none
 
     ! Arguments
     class(graph_type), intent(inout) :: this
     !! Parent. Instance of the graph structure.
-    integer, dimension(2), intent(in) :: index
+    type(edge_type), intent(in), optional :: edge
+    !! Edge to be added.
+    integer, dimension(2), intent(in), optional :: index
     !! Vertex indices of the edge.
     real(real32), intent(in), optional :: weight
     !! Weight of the edge.
@@ -76,28 +111,56 @@ contains
     !! Boolean whether the edge is directed. Default is False.
 
     ! Local variables
-    class(edge_type), allocatable :: edge
+    class(edge_type), allocatable :: edge_
     !! Initialised edge.
     real(real32) :: weight_
     !! Weight of the edge.
     logical :: directed_ = .false.
 
-    if(present(weight)) weight_ = weight
-    if(present(directed)) directed_ = directed
-
-    if(present(feature)) then
-      edge = edge_type_init(index, weight_, feature, directed_)
-    else
-      edge = edge_type_init(index, weight_, directed=directed_)
+    if(present(edge).and.( &
+         present(index)   .or. &
+         present(weight)  .or. &
+         present(directed).or. &
+         present(feature) &
+    ))then
+       write(0,*) 'ERROR: Both edge and parameters are present where only one &
+            &should be defined'
+       stop "Exiting..."
+    elseif(.not.present(edge)  .and. &
+         .not.present(index)   .and. &
+         .not.present(weight)  .and. &
+         .not.present(directed).and. &
+         .not.present(feature) &
+    )then
+       write(0,*) 'ERROR: Neither edge nor parameters are present'
+        stop "Exiting..."
     end if
 
+    if(present(edge))then
+       edge_ = edge
+    else
+       if(.not.present(index))then
+          write(0,*) 'ERROR: Index is not present'
+          stop "Exiting..."
+       else
+          if(present(weight)) weight_ = weight
+          if(present(directed)) directed_ = directed
+          if(present(feature)) then
+             edge_ = edge_type_init(index, weight_, feature, directed_)
+          else
+             edge_ = edge_type_init(index, weight_, directed=directed_)
+          end if
+       end if
+      end if
+
     this%num_edges = this%num_edges + 1
-    this%edge = [this%edge, edge]
+    this%edge = [this%edge, edge_]
     call this%generate_adjacency()
 
-    this%vertex(index(1))%degree = this%vertex(index(1))%degree + 1
+    this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
     if(.not.directed_) &
-       this%vertex(index(2))%degree = this%vertex(index(2))%degree + 1
+       this%vertex(edge_%index(2))%degree = &
+            this%vertex(edge_%index(2))%degree + 1
 
   end subroutine add_edge
 
