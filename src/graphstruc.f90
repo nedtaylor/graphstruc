@@ -63,6 +63,8 @@ module graphstruc
      type(edge_type), dimension(:), allocatable :: edge
      !! Array of edges in the graph.
    contains
+     procedure, pass(this) :: add_edge
+     !! Procedure to add an edge to the graph.
      procedure, pass(this) :: calculate_degree
      !! Procedure to calculate the degree of the vertices.
      procedure, pass(this) :: generate_adjacency
@@ -110,6 +112,21 @@ module graphstruc
   end interface graph_type
 
   interface
+    module subroutine add_edge(this, index, weight, feature, directed)
+      !! Interface for adding an edge to the graph.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+      integer, dimension(2), intent(in) :: index
+      !! Vertex indices of the edge.
+      real(real32), intent(in), optional :: weight
+      !! Weight of the edge.
+      real(real32), dimension(:), intent(in), optional :: feature
+      !! Feature vector of the edge.
+      logical, intent(in), optional :: directed
+      !! Boolean whether the edge is directed. Default is False.
+    end subroutine add_edge
+
     module subroutine calculate_degree(this)
       !! Interface for calculating the degree of the vertices.
       implicit none

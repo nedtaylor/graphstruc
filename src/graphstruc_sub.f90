@@ -23,7 +23,7 @@ contains
     type(edge_type) :: output
     output%index = index
     if(present(directed))then
-       if(directed) output%index(2) = -index(2)
+       if(directed) output%index(2) = -abs(index(2))
     end if
     if(present(weight)) output%weight = weight
     if(present(feature)) output%feature = feature
@@ -59,6 +59,49 @@ contains
   end function graph_type_init
 
 
+  module subroutine add_edge(this, index, weight, feature, directed)
+    !! Interface for adding an edge to the graph.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, dimension(2), intent(in) :: index
+    !! Vertex indices of the edge.
+    real(real32), intent(in), optional :: weight
+    !! Weight of the edge.
+    real(real32), dimension(:), intent(in), optional :: feature
+    !! Feature vector of the edge.
+    logical, intent(in), optional :: directed
+    !! Boolean whether the edge is directed. Default is False.
+
+    ! Local variables
+    class(edge_type), allocatable :: edge
+    !! Initialised edge.
+    real(real32) :: weight_
+    !! Weight of the edge.
+    logical :: directed_ = .false.
+
+    if(present(weight)) weight_ = weight
+    if(present(directed)) directed_ = directed
+
+    if(present(feature)) then
+      edge = edge_type_init(index, weight_, feature, directed_)
+    else
+      edge = edge_type_init(index, weight_, directed=directed_)
+    end if
+
+    this%num_edges = this%num_edges + 1
+    this%edge = [this%edge, edge]
+    call this%generate_adjacency()
+
+    this%vertex(index(1))%degree = this%vertex(index(1))%degree + 1
+    if(.not.directed_) &
+       this%vertex(index(2))%degree = this%vertex(index(2))%degree + 1
+
+  end subroutine add_edge
+
+
   module subroutine calculate_degree(this)
     !! Calculate the degree of the vertices in the graph.
     implicit none
@@ -91,6 +134,7 @@ contains
     integer :: i, j, k
     !! Loop indices.
 
+    if(allocated(this%adjacency)) deallocate(this%adjacency)
     allocate(this%adjacency(this%num_vertices, this%num_vertices))
     this%adjacency = 0
     do k = 1, this%num_edges
@@ -104,5 +148,6 @@ contains
       end if
     end do
   end subroutine generate_adjacency
+  
 
 end submodule graphstruc_submodule
