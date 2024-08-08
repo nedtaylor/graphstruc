@@ -1,6 +1,6 @@
 [![MIT workflow](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/mit/ "View MIT license")
 [![Latest Release](https://img.shields.io/github/v/release/nedtaylor/graphstruc?sort=semver)](https://github.com/nedtaylor/graphstruc/releases "View on GitHub")
-[![FPM](https://img.shields.io/badge/fpm-0.9.0-purple)](https://github.com/fortran-lang/fpm "View Fortran Package Manager")
+[![FPM](https://img.shields.io/badge/fpm-0.10.1-purple)](https://github.com/fortran-lang/fpm "View Fortran Package Manager")
 [![CMAKE](https://img.shields.io/badge/cmake-3.17.5-red)](https://github.com/Kitware/CMake/releases/tag/v3.17.5 "View cmake")
 [![GCC compatibility](https://img.shields.io/badge/gcc-14.1.0-green)](https://gcc.gnu.org/gcc-14/ "View GCC")
 
