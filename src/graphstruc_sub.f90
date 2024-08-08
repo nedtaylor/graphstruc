@@ -150,8 +150,10 @@ contains
     !! Initialised edge.
     real(real32) :: weight_
     !! Weight of the edge.
-    logical :: directed_ = .false.
+    logical :: directed_
 
+
+    directed_ = .false.
     if(present(edge).and.( &
          present(index)   .or. &
          present(weight)  .or. &
@@ -183,6 +185,10 @@ contains
              directed_ = directed
           else
              if(any(index .lt. 0)) directed_ = .true.
+          end if
+          if(directed_.and.(directed_.neqv.this%directed))then
+             write(0,*) 'ERROR: Edge direction does not match graph direction'
+             stop "Exiting..."
           end if
           if(present(feature)) then
              edge_ = edge_type_init(index, weight_, feature, directed_)
@@ -236,6 +242,7 @@ contains
     if(allocated(this%vertex)) deallocate(this%vertex)
     if(allocated(this%edge)) deallocate(this%edge)
     this%num_vertices = num_vertices
+    this%num_edges = 0
     if(present(num_vertex_features)) &
          this%num_vertex_features = num_vertex_features
     allocate(this%vertex(num_vertices))
@@ -413,8 +420,8 @@ contains
        if(this%directed.and.j.lt.0) then
           this%adjacency(i,abs(j)) = k
        else
-          this%adjacency(i,j) = k
-          this%adjacency(j,i) = k
+          this%adjacency(i,abs(j)) = k
+          this%adjacency(abs(j),i) = k
        end if
     end do
   end subroutine generate_adjacency
