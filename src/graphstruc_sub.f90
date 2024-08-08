@@ -121,6 +121,7 @@ contains
 
 
     this%num_vertices = this%num_vertices + 1
+    if(.not.allocated(this%vertex)) allocate(this%vertex(0))
     this%vertex = [this%vertex, vertex_]
     call this%generate_adjacency()
   end subroutine add_vertex
@@ -205,6 +206,7 @@ contains
 
 
     this%num_edges = this%num_edges + 1
+    if(.not.allocated(this%edge)) allocate(this%edge(0))
     this%edge = [this%edge, edge_]
     call this%generate_adjacency()
 
