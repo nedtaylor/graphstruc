@@ -64,16 +64,22 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Define the sources
 set(SRC_DIR src)
-set(FORTRAN_SRC_DIR ${SRC_DIR})
+set(LIB_DIR ${SRC_DIR}/graphstruc)
 
+set(LIB_FILES
+    graphstruc_kinds.f90
+    graphstruc_types.f90
+    graphstruc_types_sub.f90
+)
+foreach(lib ${LIB_FILES})
+    list(APPEND PREPENDED_LIB_FILES ${LIB_DIR}/${lib})
+endforeach()
 
 set(SRC_FILES
-    graphstruc_kinds.f90
     graphstruc.f90
-    graphstruc_sub.f90
 )
 foreach(src ${SRC_FILES})
-    list(APPEND PREPENDED_SRC_FILES ${FORTRAN_SRC_DIR}/${src})
+    list(APPEND PREPENDED_SRC_FILES ${SRC_DIR}/${src})
 endforeach()
 
 
@@ -134,7 +140,7 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${PPFLAGS}")
 
 
 # create the library
-add_library(${PROJECT_NAME} STATIC ${PREPENDED_SRC_FILES})
+add_library(${PROJECT_NAME} STATIC ${PREPENDED_LIB_FILES} ${PREPENDED_SRC_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC)
 
@@ -153,20 +159,6 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>")
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
 
-
-
-if (BUILD_EXECUTABLE)
-    add_executable(${PROJECT_NAME}_executable ${PREPENDED_EXECUTABLE_FILES})
-    target_link_libraries(${PROJECT_NAME}_executable PRIVATE ${PROJECT_NAME})
-    install(TARGETS ${PROJECT_NAME}_executable DESTINATION bin)
-    set_target_properties(${PROJECT_NAME}_executable PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${OPTIMFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Parallel>:${OPTIMFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Parallel>:${MPFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
-endif()
 
 
 # include the build test directory

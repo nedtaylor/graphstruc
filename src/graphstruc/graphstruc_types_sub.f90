@@ -1,4 +1,4 @@
-submodule(graphstruc) graphstruc_submodule
+submodule(graphstruc_types) graphstruc_types_submodule
   !! This submodule contains the implementation of procedures outlined in the
   !! graphstruc module.
   implicit none  
@@ -427,4 +427,4 @@ contains
   end subroutine generate_adjacency
   
 
-end submodule graphstruc_submodule
+end submodule graphstruc_types_submodule
