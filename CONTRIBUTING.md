@@ -28,13 +28,13 @@ Please first discuss potential changes you wish to make to the project via issue
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
-[graphstruc Code of Conduct](https://github.com/nedtaylor/graphstrucblob/master/CODE_OF_CONDUCT.md).
+[graphstruc Code of Conduct](CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to .
 
 ## I Have a Question
 
-> If you want to ask a question, we assume that you have read the available [Documentation]().
+> If you want to ask a question, we assume that you have read the available [Documentation](README.md).
 
 Before you ask a question, it is best to search for existing [Issues](https://github.com/nedtaylor/graphstruc/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
 
