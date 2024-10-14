@@ -17,6 +17,8 @@ module graphstruc_types
      !! Type implementing the vertex structure.
      integer :: degree = 0
      !! Degree of the vertex.
+     integer :: id
+     !! Optional identifer for the vertex.
      real(real32), dimension(:), allocatable :: feature
      !! Feature vector of the vertex.
   end type vertex_type
@@ -35,6 +37,8 @@ module graphstruc_types
      !! Both indices are +ve for bidirectional edges.
      real(real32) :: weight = 1._real32
      !! Weight of the edge.
+     integer :: id
+     !! Optional identifer for the edge.
      real(real32), dimension(:), allocatable :: feature
      !! Feature vector of the edge.
   end type edge_type
@@ -122,7 +126,7 @@ module graphstruc_types
   end interface graph_type
 
   interface
-    module subroutine add_vertex(this, vertex, feature)
+    module subroutine add_vertex(this, vertex, feature, id)
       !! Interface for adding a vertex to the graph.
       implicit none
       class(graph_type), intent(inout) :: this
@@ -131,9 +135,11 @@ module graphstruc_types
       !! Vertex to be added.
       real(real32), dimension(:), intent(in), optional :: feature
       !! Feature vector of the vertex.
+      integer, intent(in), optional :: id
+      !! Identifier of the vertex.
     end subroutine add_vertex
 
-    module subroutine add_edge(this, edge, index, weight, feature, directed)
+    module subroutine add_edge(this, edge, index, weight, feature, directed, id)
       !! Interface for adding an edge to the graph.
       implicit none
       class(graph_type), intent(inout) :: this
@@ -148,6 +154,8 @@ module graphstruc_types
       !! Feature vector of the edge.
       logical, intent(in), optional :: directed
       !! Boolean whether the edge is directed. Default is False.
+      integer, intent(in), optional :: id
+      !! Identifier of the vertex.
     end subroutine add_edge
 
     module subroutine set_num_vertices(this, num_vertices, num_vertex_features)

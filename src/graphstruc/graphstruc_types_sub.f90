@@ -79,7 +79,7 @@ contains
   end function graph_type_init
 
 
-  module subroutine add_vertex(this, vertex, feature)
+  module subroutine add_vertex(this, vertex, feature, id)
     !! Add a vertex to the graph.
     implicit none
 
@@ -90,6 +90,8 @@ contains
     !! Vertex to be added.
     real(real32), dimension(:), intent(in), optional :: feature
     !! Feature vector of the vertex.
+    integer, intent(in), optional :: id
+    !! Identifier of the vertex.
 
     ! Local variables
     type(vertex_type) :: vertex_
@@ -119,6 +121,8 @@ contains
        stop "Exiting..."
     end if
 
+    if(present(id)) vertex_%id = id
+
 
     this%num_vertices = this%num_vertices + 1
     if(.not.allocated(this%vertex)) allocate(this%vertex(0))
@@ -127,7 +131,7 @@ contains
   end subroutine add_vertex
 
 
-  module subroutine add_edge(this, edge, index, weight, feature, directed)
+  module subroutine add_edge(this, edge, index, weight, feature, directed, id)
     !! Add an edge to the graph.
     implicit none
 
@@ -144,6 +148,8 @@ contains
     !! Feature vector of the edge.
     logical, intent(in), optional :: directed
     !! Boolean whether the edge is directed. Default is False.
+    integer, intent(in), optional :: id
+    !! Identifier of the edge.
 
     ! Local variables
     class(edge_type), allocatable :: edge_
@@ -210,6 +216,7 @@ contains
        stop "Exiting..."
     end if
 
+    if(present(id)) edge_%id = id
 
     this%num_edges = this%num_edges + 1
     if(.not.allocated(this%edge)) allocate(this%edge(0))
