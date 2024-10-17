@@ -49,7 +49,7 @@ module graphstruc_types
      !! The graph structure contains the vertices and edges of the graph.
      logical :: directed = .false.
      !! Boolean whether the graph is directed.
-     integer :: num_vertices, num_edges
+     integer :: num_vertices= 0, num_edges = 0
      !! Number of vertices and edges in the graph.
      integer :: num_vertex_features = 0, num_edge_features = 0
      !! Number of features for vertices and edges.
