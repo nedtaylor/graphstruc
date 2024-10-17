@@ -112,9 +112,9 @@ module graphstruc_types
       implicit none
 
       ! Arguments
-      type(vertex_type), dimension(:), intent(in) :: vertex
+      type(vertex_type), dimension(:), intent(in), optional :: vertex
       !! Vertices in the graph.
-      type(edge_type), dimension(:), intent(in) :: edge
+      type(edge_type), dimension(:), intent(in), optional :: edge
       !! Edges in the graph.
       character(len=128), intent(in), optional :: name
       !! Name of the graph.

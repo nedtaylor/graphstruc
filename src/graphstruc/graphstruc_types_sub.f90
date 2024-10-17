@@ -36,9 +36,9 @@ contains
     implicit none
 
     ! Arguments
-    type(vertex_type), dimension(:), intent(in) :: vertex
+    type(vertex_type), dimension(:), intent(in), optional :: vertex
     !! Vertices in the graph.
-    type(edge_type), dimension(:), intent(in) :: edge
+    type(edge_type), dimension(:), intent(in), optional :: edge
     !! Edges in the graph.
     character(len=128), intent(in), optional :: name
     !! Name of the graph.
@@ -51,31 +51,43 @@ contains
     integer :: i
     !! Loop index.
 
-    output%num_vertices = size(vertex, dim=1)
-    output%num_edges = size(edge, dim=1)
-    output%num_vertex_features = size(vertex(1)%feature, dim=1)
-    do i = 1, output%num_vertices
-       if(size(vertex(i)%feature, dim=1) .ne. output%num_vertex_features)then
-          write(0,*) 'ERROR: Number of vertex features do not match'
-          stop "Exiting..."
-       end if
-    end do
-    output%num_edge_features = size(edge(1)%feature, dim=1)
-    do i = 1, output%num_edges
-       if(size(edge(i)%feature, dim=1) .ne. output%num_edge_features)then
-          write(0,*) 'ERROR: Number of edge indices do not match'
-          stop "Exiting..."
-       end if
-    end do
     output%directed = .false.
     if(present(directed)) output%directed = directed
     if(present(name)) output%name = name
-    allocate(output%vertex(output%num_vertices))
-    allocate(output%edge(output%num_edges))
-    output%vertex = vertex
-    output%edge = edge
-    call output%generate_adjacency()
-    call output%calculate_degree()
+    if(present(vertex))then
+       output%num_vertices = size(vertex, dim=1)
+       output%num_vertex_features = size(vertex(1)%feature, dim=1)
+       do i = 1, output%num_vertices
+          if(size(vertex(i)%feature, dim=1) .ne. output%num_vertex_features)then
+             write(0,*) 'ERROR: Number of vertex features do not match'
+             stop "Exiting..."
+          end if
+       end do
+       allocate(output%vertex(output%num_vertices))
+       output%vertex = vertex
+       if(present(edge))then
+          output%num_edges = size(edge, dim=1)
+          output%num_edge_features = size(edge(1)%feature, dim=1)
+          do i = 1, output%num_edges
+             if(size(edge(i)%feature, dim=1) .ne. output%num_edge_features)then
+                write(0,*) 'ERROR: Number of edge indices do not match'
+                stop "Exiting..."
+             end if
+          end do
+       end if
+       allocate(output%edge(output%num_edges))
+       output%edge = edge
+       call output%generate_adjacency()
+       call output%calculate_degree()
+    elseif(present(edge))then
+       write(0,*) 'ERROR: Edges are present without vertices'
+       stop "Exiting..."
+    else
+       output%num_vertices = 0
+       output%num_vertex_features = 0
+       output%num_edges = 0
+       output%num_edge_features = 0
+    end if
   end function graph_type_init
 
 
