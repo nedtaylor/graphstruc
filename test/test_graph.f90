@@ -182,12 +182,20 @@ program test_graph
   ! test set_num_vertices
   !-----------------------------------------------------------------------------
   call graph%set_num_vertices(2, num_vertex_features = 3)
-  if(graph%num_edges .ne. 2)then
+  if(graph%num_vertices .ne. 2)then
+     write(0,*) 'Graph set_num_vertices failed for num_vertices'
+     success = .false.
+  end if
+  if(size(graph%vertex,dim=1).ne.2)then
+     write(0,*) 'Graph set_num_vertices failed for vertex'
+     success = .false.
+  end if
+  if(graph%num_edges .ne. 0)then
      write(0,*) 'Graph set_num_vertices failed for num_edges'
      success = .false.
   end if
-  if(size(graph%edge,dim=1).ne.2)then
-     write(0,*) 'Graph set_num_edges failed for edge'
+  if(allocated(graph%edge))then
+     write(0,*) 'Graph set_num_vertices failed for edge'
      success = .false.
   end if
 
