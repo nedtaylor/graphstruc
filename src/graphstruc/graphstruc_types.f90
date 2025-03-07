@@ -17,7 +17,7 @@ module graphstruc_types
      !! Type implementing the vertex structure.
      integer :: degree = 0
      !! Degree of the vertex.
-     integer :: id
+     integer :: id = -1
      !! Optional identifer for the vertex.
      real(real32), dimension(:), allocatable :: feature
      !! Feature vector of the vertex.
@@ -37,7 +37,7 @@ module graphstruc_types
      !! Both indices are +ve for bidirectional edges.
      real(real32) :: weight = 1._real32
      !! Weight of the edge.
-     integer :: id
+     integer :: id = -1
      !! Optional identifer for the edge.
      real(real32), dimension(:), allocatable :: feature
      !! Feature vector of the edge.
@@ -84,6 +84,22 @@ module graphstruc_types
      procedure, pass(this) :: generate_adjacency
      !! Procedure to generate the adjacency matrix.
   end type graph_type
+
+  interface vertex_type
+    module function vertex_type_init(feature, id) &
+         result(output)
+      !! Interface for initialising a vertex.
+      implicit none
+
+      ! Arguments
+      real(real32), dimension(:), intent(in) :: feature
+      !! Feature vector of the vertex.
+      integer, intent(in), optional :: id
+      !! Identifier of the vertex.
+      type(vertex_type) :: output
+      !! Initialised vertex.
+    end function vertex_type_init
+  end interface vertex_type
 
   interface edge_type
     module function edge_type_init(index, weight, feature, directed) &

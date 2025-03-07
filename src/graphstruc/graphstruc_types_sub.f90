@@ -6,6 +6,24 @@ submodule(graphstruc_types) graphstruc_types_submodule
 
 contains
   
+  module function vertex_type_init(feature, id) &
+       result(output)
+    !! Initialise a vertex.
+    implicit none
+
+    ! Arguments
+    real(real32), dimension(:), intent(in) :: feature
+    !! Feature vector of the vertex.
+    integer, intent(in), optional :: id
+    !! Identifier of the vertex.
+    type(vertex_type) :: output
+    !! Initialised vertex.
+
+    output%feature = feature
+    if(present(id)) output%id = id
+  end function vertex_type_init
+
+
   module function edge_type_init(index, weight, feature, directed) &
        result(output)
     !! Initialise an edge.
@@ -50,6 +68,8 @@ contains
     ! Local variables
     integer :: i
     !! Loop index.
+    integer :: id
+    !! Identifier of the vertex or edge.
 
     output%directed = .false.
     if(present(directed)) output%directed = directed
@@ -65,6 +85,15 @@ contains
        end do
        allocate(output%vertex(output%num_vertices))
        output%vertex = vertex
+       id = 1
+       do i = 1, output%num_vertices
+          if(output%vertex(i)%id .eq. -1)then
+             do while (any(output%vertex(:)%id .eq. id))
+                id = id + 1
+             end do
+             output%vertex(i)%id = id
+          end if
+       end do
        if(present(edge))then
           output%num_edges = size(edge, dim=1)
           output%num_edge_features = size(edge(1)%feature, dim=1)
@@ -77,6 +106,14 @@ contains
        end if
        allocate(output%edge(output%num_edges))
        output%edge = edge
+       do i = 1, output%num_edges
+          if(output%edge(i)%id .eq. -1)then
+             do while (any(output%edge(:)%id .eq. id))
+                id = id + 1
+             end do
+             output%edge(i)%id = id
+          end if
+       end do
        call output%generate_adjacency()
        call output%calculate_degree()
     elseif(present(edge))then
