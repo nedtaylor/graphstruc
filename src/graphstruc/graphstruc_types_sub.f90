@@ -6,6 +6,24 @@ submodule(graphstruc_types) graphstruc_types_submodule
 
 contains
   
+  module function vertex_type_init(feature, id) &
+       result(output)
+    !! Initialise a vertex.
+    implicit none
+
+    ! Arguments
+    real(real32), dimension(:), intent(in) :: feature
+    !! Feature vector of the vertex.
+    integer, intent(in), optional :: id
+    !! Identifier of the vertex.
+    type(vertex_type) :: output
+    !! Initialised vertex.
+
+    output%feature = feature
+    if(present(id)) output%id = id
+  end function vertex_type_init
+
+
   module function edge_type_init(index, weight, feature, directed) &
        result(output)
     !! Initialise an edge.
@@ -36,9 +54,9 @@ contains
     implicit none
 
     ! Arguments
-    type(vertex_type), dimension(:), intent(in) :: vertex
+    type(vertex_type), dimension(:), intent(in), optional :: vertex
     !! Vertices in the graph.
-    type(edge_type), dimension(:), intent(in) :: edge
+    type(edge_type), dimension(:), intent(in), optional :: edge
     !! Edges in the graph.
     character(len=128), intent(in), optional :: name
     !! Name of the graph.
@@ -50,36 +68,67 @@ contains
     ! Local variables
     integer :: i
     !! Loop index.
+    integer :: id
+    !! Identifier of the vertex or edge.
 
-    output%num_vertices = size(vertex, dim=1)
-    output%num_edges = size(edge, dim=1)
-    output%num_vertex_features = size(vertex(1)%feature, dim=1)
-    do i = 1, output%num_vertices
-       if(size(vertex(i)%feature, dim=1) .ne. output%num_vertex_features)then
-          write(0,*) 'ERROR: Number of vertex features do not match'
-          stop "Exiting..."
-       end if
-    end do
-    output%num_edge_features = size(edge(1)%feature, dim=1)
-    do i = 1, output%num_edges
-       if(size(edge(i)%feature, dim=1) .ne. output%num_edge_features)then
-          write(0,*) 'ERROR: Number of edge indices do not match'
-          stop "Exiting..."
-       end if
-    end do
     output%directed = .false.
     if(present(directed)) output%directed = directed
     if(present(name)) output%name = name
-    allocate(output%vertex(output%num_vertices))
-    allocate(output%edge(output%num_edges))
-    output%vertex = vertex
-    output%edge = edge
-    call output%generate_adjacency()
-    call output%calculate_degree()
+    if(present(vertex))then
+       output%num_vertices = size(vertex, dim=1)
+       output%num_vertex_features = size(vertex(1)%feature, dim=1)
+       do i = 1, output%num_vertices
+          if(size(vertex(i)%feature, dim=1) .ne. output%num_vertex_features)then
+             write(0,*) 'ERROR: Number of vertex features do not match'
+             stop "Exiting..."
+          end if
+       end do
+       allocate(output%vertex(output%num_vertices))
+       output%vertex = vertex
+       id = 1
+       do i = 1, output%num_vertices
+          if(output%vertex(i)%id .eq. -1)then
+             do while (any(output%vertex(:)%id .eq. id))
+                id = id + 1
+             end do
+             output%vertex(i)%id = id
+          end if
+       end do
+       if(present(edge))then
+          output%num_edges = size(edge, dim=1)
+          output%num_edge_features = size(edge(1)%feature, dim=1)
+          do i = 1, output%num_edges
+             if(size(edge(i)%feature, dim=1) .ne. output%num_edge_features)then
+                write(0,*) 'ERROR: Number of edge indices do not match'
+                stop "Exiting..."
+             end if
+          end do
+       end if
+       allocate(output%edge(output%num_edges))
+       output%edge = edge
+       do i = 1, output%num_edges
+          if(output%edge(i)%id .eq. -1)then
+             do while (any(output%edge(:)%id .eq. id))
+                id = id + 1
+             end do
+             output%edge(i)%id = id
+          end if
+       end do
+       call output%generate_adjacency()
+       call output%calculate_degree()
+    elseif(present(edge))then
+       write(0,*) 'ERROR: Edges are present without vertices'
+       stop "Exiting..."
+    else
+       output%num_vertices = 0
+       output%num_vertex_features = 0
+       output%num_edges = 0
+       output%num_edge_features = 0
+    end if
   end function graph_type_init
 
 
-  module subroutine add_vertex(this, vertex, feature)
+  module subroutine add_vertex(this, vertex, feature, id)
     !! Add a vertex to the graph.
     implicit none
 
@@ -90,6 +139,8 @@ contains
     !! Vertex to be added.
     real(real32), dimension(:), intent(in), optional :: feature
     !! Feature vector of the vertex.
+    integer, intent(in), optional :: id
+    !! Identifier of the vertex.
 
     ! Local variables
     type(vertex_type) :: vertex_
@@ -119,6 +170,8 @@ contains
        stop "Exiting..."
     end if
 
+    if(present(id)) vertex_%id = id
+
 
     this%num_vertices = this%num_vertices + 1
     if(.not.allocated(this%vertex)) allocate(this%vertex(0))
@@ -127,7 +180,7 @@ contains
   end subroutine add_vertex
 
 
-  module subroutine add_edge(this, edge, index, weight, feature, directed)
+  module subroutine add_edge(this, edge, index, weight, feature, directed, id)
     !! Add an edge to the graph.
     implicit none
 
@@ -144,6 +197,8 @@ contains
     !! Feature vector of the edge.
     logical, intent(in), optional :: directed
     !! Boolean whether the edge is directed. Default is False.
+    integer, intent(in), optional :: id
+    !! Identifier of the edge.
 
     ! Local variables
     class(edge_type), allocatable :: edge_
@@ -210,6 +265,7 @@ contains
        stop "Exiting..."
     end if
 
+    if(present(id)) edge_%id = id
 
     this%num_edges = this%num_edges + 1
     if(.not.allocated(this%edge)) allocate(this%edge(0))
