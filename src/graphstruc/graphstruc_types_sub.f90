@@ -502,7 +502,7 @@ contains
              this%adjacency(abs(j),i) = k
           end if
        end do
-    else if ( this%is_sparse .and. ( .not. this%directed ) )  ! graph is sparse and not directed; allocate and fill arrays adj_ia and adj_ja.
+    else if( this%is_sparse .and. ( .not. this%directed ) )then  ! graph is sparse and not directed; allocate and fill arrays adj_ia and adj_ja.
        if(allocated(this%adj_ia)) deallocate(this%adj_ia)
        if(allocated(this%adj_ja)) deallocate(this%adj_ja)
        allocate(this%adj_ia(this%num_vertices+1))
@@ -529,7 +529,7 @@ contains
              if ( ( coo(1,i1) .gt. ( coo(1,i2) ) ) .or. &
                   ( ( coo(1,i1) .eq. coo(1,i2) ) .and. ( coo(2,i1) .gt. coo(2,i2)  ) ) ) then
                 temp(1:3) = coo(1:3,i1)
-                coo(1;3,i1) = coo(1:3,i2)
+                coo(1:3,i1) = coo(1:3,i2)
                 coo(1:3,i2) = temp(1:3)
              end if
           end do
