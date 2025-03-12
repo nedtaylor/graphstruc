@@ -2,6 +2,8 @@ module graphstruc_types
   !! This module contains the graph constructs.
   !! 
   !! The module provides a derived type implementation for graph structures.
+  !! Sparse storage implemented using Compressed Sparse Row (CSR) format.
+  !! Sparse adjacency implemented by Artan Qerushi.
   use graphstruc_kinds, only: real32
   implicit none
 
@@ -49,6 +51,8 @@ module graphstruc_types
      !! The graph structure contains the vertices and edges of the graph.
      logical :: directed = .false.
      !! Boolean whether the graph is directed.
+     logical :: is_sparse = .false.
+     !! Boolean whether the graph is sparse
      integer :: num_vertices= 0, num_edges = 0
      !! Number of vertices and edges in the graph.
      integer :: num_vertex_features = 0, num_edge_features = 0
@@ -56,12 +60,28 @@ module graphstruc_types
      character(len=128) :: name
      !! Name of the graph.
      integer, dimension(:,:), allocatable :: adjacency
-     !! Adjacency matrix of the graph.
+     !! Adjacency matrix of the graph, when the graph isn't sparse.
      !!
      !! The adjacency matrix is a 2D array of integers.
      !! The value of the element (i,j) is the index of the edge connecting
      !! vertex i to vertex j (directed).
      !! If no edge exists, the value is 0.
+     integer, dimension(:), allocatable :: adj_ia
+     integer, dimension(:,:), allocatable :: adj_ja
+     !! Adjacency matrix of the graph, when the graph is sparse and not directed,
+     !! in Compressed Sparse Row (CSR) format.
+     !!
+     !! The first array, adj_ia, is known as the row pointer array;
+     !! the second array, adj_ja, is known as the column index array. 
+     !! For example, the nodes connected to node 1 through an edge,
+     !! are adj_ja(adj_ia(1)) to adj_ja(adj_ia(2)-1), the nodes connected
+     !! to node 2 through an edge are, adj_ja(adj_ia(2)) to adj_ja(adj_ia(3)-1)
+     !! and so on. In a calculation, to loop over the nodes connected to node i
+     !! through an edge, we use:
+     !! do i = adj_ia(i), adj_ia(i+1) - 1
+     !!   adj_ja(1,i) ... node connected to node i through an edge
+     !!   adj_ja(2,i) ... edge connecting node i to node adj_ja(1,i)
+     !! end do     
      type(vertex_type), dimension(:), allocatable :: vertex
      !! Array of vertices in the graph.
      type(edge_type), dimension(:), allocatable :: edge
@@ -122,7 +142,7 @@ module graphstruc_types
   end interface edge_type
 
   interface graph_type
-    module function graph_type_init(vertex, edge, name, directed) &
+    module function graph_type_init(vertex, edge, name, directed, is_sparse) &
          result(output)
       !! Interface for initialising a graph.
       implicit none
@@ -136,6 +156,8 @@ module graphstruc_types
       !! Name of the graph.
       logical, intent(in), optional :: directed
       !! Boolean whether the graph is directed. Default is False.
+      logical, intent(in), optional :: is_sparse
+      !! Boolean whether the graph is sparse. Default is False.
       type(graph_type) :: output
       !! Initialised graph.
     end function graph_type_init

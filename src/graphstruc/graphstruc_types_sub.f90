@@ -1,6 +1,8 @@
 submodule(graphstruc_types) graphstruc_types_submodule
   !! This submodule contains the implementation of procedures outlined in the
   !! graphstruc module.
+  !!
+  !! Sparse adjacency implemented by Artan Qerushi.
   implicit none  
 
 
@@ -48,7 +50,7 @@ contains
   end function edge_type_init
 
 
-  module function graph_type_init(vertex, edge, name, directed) &
+  module function graph_type_init(vertex, edge, name, directed, is_sparse) &
        result(output)
     !! Interface for initialising a graph.
     implicit none
@@ -62,6 +64,8 @@ contains
     !! Name of the graph.
     logical, intent(in), optional :: directed
     !! Boolean whether the graph is directed. Default is False.
+    logical, intent(in), optional :: is_sparse
+    !! Boolean whether the graph is sparse. Default is False.
     type(graph_type) :: output
     !! Initialised graph.
 
@@ -71,7 +75,9 @@ contains
     integer :: id
     !! Identifier of the vertex or edge.
 
+    output%is_sparse = .false.
     output%directed = .false.
+    if(present(is_sparse)) output%is_sparse = is_sparse
     if(present(directed)) output%directed = directed
     if(present(name)) output%name = name
     if(present(vertex))then
@@ -447,13 +453,24 @@ contains
     integer :: i, j
     !! Loop indices.
 
-    this%vertex(:)%degree = 0
-    do i = 1, this%num_vertices
-       do j = 1, this%num_vertices, 1
-          if(this%adjacency(i,j) .gt. 0) &
-               this%vertex(i)%degree = this%vertex(i)%degree + 1
+    if ( .not. this%is_sparse )then  ! graph is not sparse
+       this%vertex(:)%degree = 0
+       do i = 1, this%num_vertices
+          do j = 1, this%num_vertices, 1
+             if(this%adjacency(i,j) .gt. 0) &
+                  this%vertex(i)%degree = this%vertex(i)%degree + 1
+          end do
        end do
-    end do
+    else if ( this%is_sparse .and. ( .not. this%directed ) )then  ! graph is sparse and not directed
+       this%vertex(:)%degree = 0
+       do i = 1, this%num_vertices
+          this%vertex(i)%degree = this%adj_ia(i+1) - this%adj_ia(i)
+       end do
+    else  ! graph is sparse and directed
+       write(0,*) 'ERROR: Case of sparse and directed graph NOT IMPLEMENTED!'
+       stop "Exiting..."
+    end if
+    
   end subroutine calculate_degree
 
 
@@ -464,23 +481,71 @@ contains
     ! Arguments
     class(graph_type), intent(inout) :: this
     !! Parent. Instance of the graph structure.
-    integer :: i, j, k
+    integer :: i, j, k, i1, i2
     !! Loop indices.
+    integer, dimension(3,this%num_vertices+2*this%num_edges) :: coo
+    !! sparse adjacency in coordinate format (coo)
+    integer, dimension(3) :: temp
+    !! temporary array
 
-    if(allocated(this%adjacency)) deallocate(this%adjacency)
-    allocate(this%adjacency(this%num_vertices, this%num_vertices))
-    this%adjacency = 0
-    do k = 1, this%num_edges
-       i = this%edge(k)%index(1)
-       j = this%edge(k)%index(2)
-       if(this%directed.and.j.lt.0) then
-          this%adjacency(i,abs(j)) = k
-       else
-          this%adjacency(i,abs(j)) = k
-          this%adjacency(abs(j),i) = k
-       end if
-    end do
-  end subroutine generate_adjacency
-  
+    if( .not. this%is_sparse )then  ! graph is not sparse; allocate and fill array adjacency.
+       if(allocated(this%adjacency)) deallocate(this%adjacency)
+       allocate(this%adjacency(this%num_vertices, this%num_vertices))
+       this%adjacency = 0
+       do k = 1, this%num_edges
+          i = this%edge(k)%index(1)
+          j = this%edge(k)%index(2)
+          if(this%directed.and.j.lt.0) then
+             this%adjacency(i,abs(j)) = k
+          else
+             this%adjacency(i,abs(j)) = k
+             this%adjacency(abs(j),i) = k
+          end if
+       end do
+    else if ( this%is_sparse .and. ( .not. this%directed ) )  ! graph is sparse and not directed; allocate and fill arrays adj_ia and adj_ja.
+       if(allocated(this%adj_ia)) deallocate(this%adj_ia)
+       if(allocated(this%adj_ja)) deallocate(this%adj_ja)
+       allocate(this%adj_ia(this%num_vertices+1))
+       allocate(this%adj_ja(2,this%num_vertices+2*this%num_edges))
+       ! Step 1: edgelist to coo array.
+       do i = 1, this%num_vertices  ! vertices interacting with themselves
+          coo(1,i) = i
+          coo(2,i) = i
+          coo(3,i) = 0
+       end do
+       do i = 1, this%num_edges     ! first pass over edges (1,2)
+          coo(1,i+this%num_vertices) = this%edge(i)%index(1)
+          coo(2,i+this%num_vertices) = this%edge(i)%index(2)
+          coo(3,i+this%num_vertices) = i
+       end do
+       do i = 1, this%num_edges     ! second pass over edges (2,1)
+          coo(1,i+this%num_vertices+this%num_edges) = this%edge(i)%index(2)
+          coo(2,i+this%num_vertices+this%num_edges) = this%edge(i)%index(1)
+          coo(3,i+this%num_vertices+this%num_edges) = i
+       end do
+       ! Step 2: sort coo array.
+       do i2 = this%num_vertices+2*this%num_edges, 2, -1
+          do i1 = 1, i2 - 1
+             if ( ( coo(1,i1) .gt. ( coo(1,i2) ) ) .or. &
+                  ( ( coo(1,i1) .eq. coo(1,i2) ) .and. ( coo(2,i1) .gt. coo(2,i2)  ) ) ) then
+                temp(1:3) = coo(1:3,i1)
+                coo(1;3,i1) = coo(1:3,i2)
+                coo(1:3,i2) = temp(1:3)
+             end if
+          end do
+       end do
+       ! Step 3: sorted coo array to adj_ia and adj_ja arrays.
+       this%adj_ia(1) = 1
+       do i = 1, this%num_vertices+2*this%num_edges
+          this%adj_ja(1,i) = coo(2,i)
+          this%adj_ja(2,i) = coo(3,i)
+          this%adj_ia(coo(1,i)+1) = i + 1
+       end do
+    else  ! graph is sparse and directed
+       write(0,*) 'ERROR: Case of sparse and directed graph NOT IMPLEMENTED!'
+       stop "Exiting..."
+    end if
+    
+  end subroutine generate_adjacency 
 
 end submodule graphstruc_types_submodule
