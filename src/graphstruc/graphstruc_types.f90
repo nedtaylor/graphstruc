@@ -68,6 +68,9 @@ module graphstruc_types
      !! If no edge exists, the value is 0.
      integer, dimension(:), allocatable :: adj_ia
      integer, dimension(:,:), allocatable :: adj_ja
+
+     real(real32), dimension(:), allocatable :: edge_weights
+     !! Weights of the edges.
      !! Adjacency matrix of the graph, when the graph is sparse and not directed,
      !! in Compressed Sparse Row (CSR) format.
      !!
@@ -81,7 +84,11 @@ module graphstruc_types
      !! do i = adj_ia(i), adj_ia(i+1) - 1
      !!   adj_ja(1,i) ... node connected to node i through an edge
      !!   adj_ja(2,i) ... edge connecting node i to node adj_ja(1,i)
-     !! end do     
+     !! end do
+     real(real32), dimension(:,:), allocatable :: vertex_features
+     !! Feature vectors of the vertices.
+     real(real32), dimension(:,:), allocatable :: edge_features
+     !! Feature vectors of the edges.
      type(vertex_type), dimension(:), allocatable :: vertex
      !! Array of vertices in the graph.
      type(edge_type), dimension(:), allocatable :: edge
@@ -103,6 +110,8 @@ module graphstruc_types
      !! Procedure to calculate the degree of the vertices.
      procedure, pass(this) :: generate_adjacency
      !! Procedure to generate the adjacency matrix.
+     procedure, pass(this) :: convert_to_sparse
+     !! Procedure to convert the graph to a sparse representation.
   end type graph_type
 
   interface vertex_type
@@ -264,6 +273,13 @@ module graphstruc_types
       class(graph_type), intent(inout) :: this
       !! Parent. Instance of the graph structure.
     end subroutine generate_adjacency
+
+    module subroutine convert_to_sparse(this)
+      !! Interface for converting the graph to a sparse representation.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+    end subroutine convert_to_sparse
   end interface
 
 end module graphstruc_types

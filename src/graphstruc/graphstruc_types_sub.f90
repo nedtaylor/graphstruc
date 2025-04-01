@@ -151,6 +151,8 @@ contains
     ! Local variables
     type(vertex_type) :: vertex_
     !! Initialised vertex.
+    real(real32), dimension(:,:), allocatable :: vertex_features
+    !! Feature vectors of the vertices.
 
 
     if(present(vertex).and.present(feature))then
@@ -180,8 +182,16 @@ contains
 
 
     this%num_vertices = this%num_vertices + 1
-    if(.not.allocated(this%vertex)) allocate(this%vertex(0))
-    this%vertex = [this%vertex, vertex_]
+    if(this%is_sparse)then
+       allocate(vertex_features(this%num_vertex_features,this%num_vertices))
+       vertex_features(:,1:this%num_vertices-1) = this%vertex_features
+       vertex_features(:,this%num_vertices) = vertex_%feature
+       if(allocated(this%vertex_features)) deallocate(this%vertex_features)
+       call move_alloc(vertex_features, this%vertex_features)
+    else
+       if(.not.allocated(this%vertex)) allocate(this%vertex(0))
+       this%vertex = [this%vertex, vertex_]
+    end if
     call this%generate_adjacency()
   end subroutine add_vertex
 
@@ -212,6 +222,8 @@ contains
     real(real32) :: weight_
     !! Weight of the edge.
     logical :: directed_
+    real(real32), dimension(:,:), allocatable :: edge_features
+    !! Feature vectors of the edges.
 
 
     directed_ = .false.
@@ -274,8 +286,16 @@ contains
     if(present(id)) edge_%id = id
 
     this%num_edges = this%num_edges + 1
-    if(.not.allocated(this%edge)) allocate(this%edge(0))
-    this%edge = [this%edge, edge_]
+    if(this%is_sparse)then
+       allocate(edge_features(this%num_edge_features,this%num_edges))
+       edge_features(:,1:this%num_edges-1) = this%edge_features
+       edge_features(:,this%num_edges) = edge_%feature
+       if(allocated(this%edge_features)) deallocate(this%edge_features)
+       call move_alloc(edge_features, this%edge_features)
+    else
+       if(.not.allocated(this%edge)) allocate(this%edge(0))
+       this%edge = [this%edge, edge_]
+    end if
     call this%generate_adjacency()
 
     this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
@@ -547,5 +567,44 @@ contains
     end if
     
   end subroutine generate_adjacency 
+
+
+  subroutine convert_to_sparse(this)
+    !! Convert the graph to a sparse representation.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+
+    ! Local variables
+    integer :: v, e
+    !! Loop indices.
+
+    if(this%is_sparse) return
+
+    this%is_sparse = .true.
+
+    if(allocated(this%adjacency)) deallocate(this%adjacency)
+    if(allocated(this%vertex_features)) deallocate(this%vertex_features)
+    if(allocated(this%edge_features)) deallocate(this%edge_features)
+    if(allocated(this%edge_weights)) deallocate(this%edge_weights)
+
+    allocate(this%vertex_features(this%num_vertex_features, this%num_vertices))
+    allocate(this%edge_features(this%num_edge_features, this%num_edges))
+    allocate(this%edge_weights(this%num_edges))
+
+    do v = 1, this%num_vertices
+       this%vertex_features(:,this%vertex(v)%id) = this%vertex(v)%feature
+    end do
+
+    do e = 1, this%num_edges
+       this%edge_features(:,this%edge(e)%id) = this%edge(e)%feature
+       this%edge_weights(this%edge(e)%id) = this%edge(e)%weight
+    end do
+
+    deallocate(this%vertex)
+
+  end subroutine convert_to_sparse
 
 end submodule graphstruc_types_submodule
