@@ -618,16 +618,16 @@ contains
        this%adj_ia(v+1) = this%adj_ia(v)
        do e = 1, this%num_edges
           if(this%directed.and.this%edge(e)%index(1).eq.v)then
-             this%adj_ja(1,this%adj_ia(v)) = this%edge(e)%index(2)
-             this%adj_ja(2,this%adj_ia(v)) = e
+             this%adj_ja(1,this%adj_ia(v+1)) = this%edge(e)%index(2)
+             this%adj_ja(2,this%adj_ia(v+1)) = e
              this%adj_ia(v+1) = this%adj_ia(v+1) + 1
           elseif(.not.this%directed.and.this%edge(e)%index(1).eq.v)then
-             this%adj_ja(1,this%adj_ia(v)) = this%edge(e)%index(2)
-             this%adj_ja(2,this%adj_ia(v)) = e
+             this%adj_ja(1,this%adj_ia(v+1)) = this%edge(e)%index(2)
+             this%adj_ja(2,this%adj_ia(v+1)) = e
              this%adj_ia(v+1) = this%adj_ia(v+1) + 1
           elseif(.not.this%directed.and.this%edge(e)%index(2).eq.v)then
-             this%adj_ja(1,this%adj_ia(v)) = this%edge(e)%index(1)
-             this%adj_ja(2,this%adj_ia(v)) = e
+             this%adj_ja(1,this%adj_ia(v+1)) = this%edge(e)%index(1)
+             this%adj_ja(2,this%adj_ia(v+1)) = e
              this%adj_ia(v+1) = this%adj_ia(v+1) + 1
           end if
        end do
