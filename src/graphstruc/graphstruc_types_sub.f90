@@ -609,6 +609,31 @@ contains
 
     deallocate(this%vertex)
 
+    allocate(this%adj_ia(this%num_vertices+1))
+    allocate(this%adj_ja(2,this%num_vertices+2*this%num_edges))
+    this%adj_ia(1) = 1
+    this%adj_ja(1,:) = 0
+    this%adj_ja(2,:) = 0
+    do v = 1, this%num_vertices
+       this%adj_ia(v+1) = this%adj_ia(v)
+       do e = 1, this%num_edges
+          if(this%directed.and.this%edge(e)%index(1).eq.v)then
+             this%adj_ja(1,this%adj_ia(v)) = this%edge(e)%index(2)
+             this%adj_ja(2,this%adj_ia(v)) = e
+             this%adj_ia(v+1) = this%adj_ia(v+1) + 1
+          elseif(.not.this%directed.and.this%edge(e)%index(1).eq.v)then
+             this%adj_ja(1,this%adj_ia(v)) = this%edge(e)%index(2)
+             this%adj_ja(2,this%adj_ia(v)) = e
+             this%adj_ia(v+1) = this%adj_ia(v+1) + 1
+          elseif(.not.this%directed.and.this%edge(e)%index(2).eq.v)then
+             this%adj_ja(1,this%adj_ia(v)) = this%edge(e)%index(1)
+             this%adj_ja(2,this%adj_ia(v)) = e
+             this%adj_ia(v+1) = this%adj_ia(v+1) + 1
+          end if
+       end do
+    end do
+    if(allocated(this%adjacency)) deallocate(this%adjacency)
+
   end subroutine convert_to_sparse
 
    subroutine convert_to_dense(this)
