@@ -578,7 +578,7 @@ contains
     !! Parent. Instance of the graph structure.
 
     ! Local variables
-    integer :: v, e
+    integer :: v, e, idx
     !! Loop indices.
 
     if(this%is_sparse) return
@@ -595,16 +595,117 @@ contains
     allocate(this%edge_weights(this%num_edges))
 
     do v = 1, this%num_vertices
-       this%vertex_features(:,this%vertex(v)%id) = this%vertex(v)%feature
+       idx = this%vertex(v)%id
+       if(idx.eq.-1) idx = v
+       this%vertex_features(:,idx) = this%vertex(v)%feature
     end do
 
     do e = 1, this%num_edges
-       this%edge_features(:,this%edge(e)%id) = this%edge(e)%feature
-       this%edge_weights(this%edge(e)%id) = this%edge(e)%weight
+       idx = this%edge(e)%id
+       if(idx.eq.-1) idx = e
+       this%edge_features(:,e) = this%edge(e)%feature
+       this%edge_weights(e) = this%edge(e)%weight
     end do
 
     deallocate(this%vertex)
 
   end subroutine convert_to_sparse
+
+   subroutine convert_to_dense(this)
+      !! Convert the graph to a dense representation.
+      implicit none
+   
+      ! Arguments
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+   
+      ! Local variables
+      integer :: v, e, i, j, idx
+      !! Loop indices.
+   
+      if(.not.this%is_sparse) return
+   
+      this%is_sparse = .false.
+   
+      if(allocated(this%vertex_features)) deallocate(this%vertex_features)
+      if(allocated(this%edge_features)) deallocate(this%edge_features)
+      if(allocated(this%edge_weights)) deallocate(this%edge_weights)
+   
+      allocate(this%vertex(this%num_vertices))
+      allocate(this%edge(this%num_edges))
+   
+      do v = 1, this%num_vertices
+         idx = this%vertex(v)%id
+         if(idx.eq.-1) idx = v
+         this%vertex(v)%feature = this%vertex_features(:,idx)
+         this%vertex(v)%id = v
+      end do
+   
+      do e = 1, this%num_edges
+         idx = this%edge(e)%id
+         if(idx.eq.-1) idx = e
+         this%edge(e)%feature = this%edge_features(:,idx)
+         this%edge(e)%weight = this%edge_weights(idx)
+         this%edge(e)%id = e
+      end do
+
+      if(allocated(this%adjacency)) deallocate(this%adjacency)
+      allocate(this%adjacency(this%num_vertices, this%num_vertices))
+      this%adjacency = 0
+      do i = 1, size(this%adj_ia, dim=1)-1
+         do j = this%adj_ia(i), this%adj_ia(i+1)-1
+            this%adjacency(i,this%adj_ja(1,j)) = this%adj_ja(2,j)
+         end do
+      end do
+
+      deallocate(this%vertex_features)
+      deallocate(this%edge_features)
+      deallocate(this%edge_weights)
+      deallocate(this%adj_ia)
+      deallocate(this%adj_ja)
+   
+   end subroutine convert_to_dense
+
+
+  module subroutine copy(this, source, sparse)
+    !! Copy the graph structure.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    class(graph_type), intent(in) :: source
+    !! Source graph to copy from.
+    logical, intent(in), optional :: sparse
+    !! Boolean whether to copy the graph as sparse. Default is False.
+
+    this%num_vertices = source%num_vertices
+    this%num_edges = source%num_edges
+    this%num_vertex_features = source%num_vertex_features
+    this%num_edge_features = source%num_edge_features
+    this%is_sparse = source%is_sparse
+    this%directed = source%directed
+    this%name = source%name
+    if(this%is_sparse)then
+       this%adj_ia = source%adj_ia
+       this%adj_ja = source%adj_ja
+       this%vertex_features = source%vertex_features
+       this%edge_features = source%edge_features
+       this%edge_weights = source%edge_weights
+    else
+       allocate(this%vertex(this%num_vertices))
+       this%vertex = source%vertex
+       allocate(this%edge(this%num_edges))
+       this%edge = source%edge
+       this%adjacency = source%adjacency
+    end if
+    if(present(sparse))then
+       if(sparse.and..not.this%is_sparse)then
+          call this%convert_to_sparse()
+       elseif(.not.sparse.and.this%is_sparse)then
+          call this%convert_to_dense()
+       end if
+    end if
+  end subroutine copy
 
 end submodule graphstruc_types_submodule

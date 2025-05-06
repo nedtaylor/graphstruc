@@ -112,6 +112,10 @@ module graphstruc_types
      !! Procedure to generate the adjacency matrix.
      procedure, pass(this) :: convert_to_sparse
      !! Procedure to convert the graph to a sparse representation.
+     procedure, pass(this) :: convert_to_dense
+     !! Procedure to convert the graph to a dense representation.
+     procedure, pass(this) :: copy
+     !! Procedure to copy the graph.
   end type graph_type
 
   interface vertex_type
@@ -280,6 +284,24 @@ module graphstruc_types
       class(graph_type), intent(inout) :: this
       !! Parent. Instance of the graph structure.
     end subroutine convert_to_sparse
+
+    module subroutine convert_to_dense(this)
+      !! Interface for converting the graph to a dense representation.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+    end subroutine convert_to_dense
+
+    module subroutine copy(this, source, sparse)
+      !! Interface for copying the graph.
+      implicit none
+      class(graph_type), intent(inout) :: this
+      !! Parent. Instance of the graph structure.
+      class(graph_type), intent(in) :: source
+      !! Source graph to be copied.
+      logical, intent(in), optional :: sparse
+      !! Boolean whether to copy the graph as sparse. Default is False.
+    end subroutine copy
   end interface
 
 end module graphstruc_types
