@@ -9,3 +9,4 @@ obj/
 build/
 doc/html
 settings.json
+.local-pre-commit-config.yaml
