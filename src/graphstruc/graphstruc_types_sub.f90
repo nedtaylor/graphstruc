@@ -323,11 +323,18 @@ contains
 
     if(allocated(this%vertex)) deallocate(this%vertex)
     if(allocated(this%edge)) deallocate(this%edge)
+    if(allocated(this%adj_ia)) deallocate(this%adj_ia)
+    if(allocated(this%adj_ja)) deallocate(this%adj_ja)
+    if(allocated(this%adjacency)) deallocate(this%adjacency)
     this%num_vertices = num_vertices
     this%num_edges = 0
     if(present(num_vertex_features)) &
          this%num_vertex_features = num_vertex_features
-    allocate(this%vertex(num_vertices))
+    if(this%is_sparse)then
+       allocate(this%vertex_features(this%num_vertex_features, this%num_vertices))
+    else
+       allocate(this%vertex(num_vertices))
+    end if
   end subroutine set_num_vertices
 
 
