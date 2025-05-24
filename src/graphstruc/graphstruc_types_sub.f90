@@ -3,11 +3,11 @@ submodule(graphstruc_types) graphstruc_types_submodule
   !! graphstruc module.
   !!
   !! Sparse adjacency implemented by Artan Qerushi.
-  implicit none  
+  implicit none
 
 
 contains
-  
+
   module function vertex_type_init(feature, id) &
        result(output)
     !! Initialise a vertex.
@@ -161,7 +161,7 @@ contains
        stop "Exiting..."
     elseif(.not.present(vertex).and..not.present(feature))then
        write(0,*) 'ERROR: Neither vertex nor feature are present'
-        stop "Exiting..."
+       stop "Exiting..."
     end if
     if(present(vertex)) vertex_ = vertex
     if(present(feature)) vertex_%feature = feature
@@ -243,7 +243,7 @@ contains
          .not.present(feature) &
     )then
        write(0,*) 'ERROR: Neither edge nor parameters are present'
-        stop "Exiting..."
+       stop "Exiting..."
     end if
 
     if(present(edge))then
@@ -300,8 +300,8 @@ contains
 
     this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
     if(.not.directed_) &
-       this%vertex(abs(edge_%index(2)))%degree = &
-            this%vertex(abs(edge_%index(2)))%degree + 1
+         this%vertex(abs(edge_%index(2)))%degree = &
+              this%vertex(abs(edge_%index(2)))%degree + 1
 
   end subroutine add_edge
 
@@ -349,12 +349,12 @@ contains
 
 
     do i = 1, size(connected_indices, dim=1)
-      directed = .false.
-      if(connected_indices(i).lt.0) directed = .true.
-      call this%add_edge( &
-           index=[vertex_index, connected_indices(i)], &
-           directed=directed &
-      )
+       directed = .false.
+       if(connected_indices(i).lt.0) directed = .true.
+       call this%add_edge( &
+            index=[vertex_index, connected_indices(i)], &
+            directed=directed &
+       )
     end do
   end subroutine set_edges
 
@@ -379,13 +379,13 @@ contains
 
     allocate(edge_indices(0))
     do i = 1, size(indices, dim=1)
-      do j = 1, this%num_edges
-        if( &
-             any(this%edge(j)%index .eq. indices(i)) .or. &
-             any(this%edge(j)%index .eq. -indices(i)) &
-        ) &
-             edge_indices = [edge_indices, j]
-      end do
+       do j = 1, this%num_edges
+          if( &
+               any(this%edge(j)%index .eq. indices(i)) .or. &
+               any(this%edge(j)%index .eq. -indices(i)) &
+          ) &
+          edge_indices = [edge_indices, j]
+       end do
     end do
     if(size(edge_indices, dim=1) .gt. 0) &
          call this%remove_edges(edge_indices, update_adjacency=.false.)
@@ -394,8 +394,8 @@ contains
     do i = 1, size(indices, dim=1)
        k = maxval(vertex_indices, dim = 1)
        this%vertex = [ &
-           this%vertex(1:k-1:1), &
-           this%vertex(k+1:this%num_vertices:1) &
+            this%vertex(1:k-1:1), &
+            this%vertex(k+1:this%num_vertices:1) &
        ]
        this%num_vertices = this%num_vertices - 1
        vertex_indices(maxloc(vertex_indices, dim = 1)) = 0
@@ -456,7 +456,7 @@ contains
        ]
        this%num_edges = this%num_edges - 1
        edge_indices(maxloc(edge_indices, dim = 1)) = 0
-      end do
+    end do
     if(update_adjacency_) call this%generate_adjacency()
   end subroutine remove_edges
 
@@ -464,7 +464,7 @@ contains
   module subroutine calculate_degree(this)
     !! Calculate the degree of the vertices in the graph.
     implicit none
-    
+
     ! Arguments
     class(graph_type), intent(inout) :: this
     !! Parent. Instance of the graph structure.
@@ -490,7 +490,7 @@ contains
        write(0,*) 'ERROR: Case of sparse and directed graph NOT IMPLEMENTED!'
        stop "Exiting..."
     end if
-    
+
   end subroutine calculate_degree
 
 
@@ -565,8 +565,8 @@ contains
        write(0,*) 'ERROR: Case of sparse and directed graph NOT IMPLEMENTED!'
        stop "Exiting..."
     end if
-    
-  end subroutine generate_adjacency 
+
+  end subroutine generate_adjacency
 
 
   subroutine convert_to_sparse(this)
@@ -636,60 +636,60 @@ contains
 
   end subroutine convert_to_sparse
 
-   subroutine convert_to_dense(this)
-      !! Convert the graph to a dense representation.
-      implicit none
-   
-      ! Arguments
-      class(graph_type), intent(inout) :: this
-      !! Parent. Instance of the graph structure.
-   
-      ! Local variables
-      integer :: v, e, i, j, idx
-      !! Loop indices.
-   
-      if(.not.this%is_sparse) return
-   
-      this%is_sparse = .false.
-   
-      if(allocated(this%vertex_features)) deallocate(this%vertex_features)
-      if(allocated(this%edge_features)) deallocate(this%edge_features)
-      if(allocated(this%edge_weights)) deallocate(this%edge_weights)
-   
-      allocate(this%vertex(this%num_vertices))
-      allocate(this%edge(this%num_edges))
-   
-      do v = 1, this%num_vertices
-         idx = this%vertex(v)%id
-         if(idx.eq.-1) idx = v
-         this%vertex(v)%feature = this%vertex_features(:,idx)
-         this%vertex(v)%id = v
-      end do
-   
-      do e = 1, this%num_edges
-         idx = this%edge(e)%id
-         if(idx.eq.-1) idx = e
-         this%edge(e)%feature = this%edge_features(:,idx)
-         this%edge(e)%weight = this%edge_weights(idx)
-         this%edge(e)%id = e
-      end do
+  subroutine convert_to_dense(this)
+    !! Convert the graph to a dense representation.
+    implicit none
 
-      if(allocated(this%adjacency)) deallocate(this%adjacency)
-      allocate(this%adjacency(this%num_vertices, this%num_vertices))
-      this%adjacency = 0
-      do i = 1, size(this%adj_ia, dim=1)-1
-         do j = this%adj_ia(i), this%adj_ia(i+1)-1
-            this%adjacency(i,this%adj_ja(1,j)) = this%adj_ja(2,j)
-         end do
-      end do
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
 
-      deallocate(this%vertex_features)
-      deallocate(this%edge_features)
-      deallocate(this%edge_weights)
-      deallocate(this%adj_ia)
-      deallocate(this%adj_ja)
-   
-   end subroutine convert_to_dense
+    ! Local variables
+    integer :: v, e, i, j, idx
+    !! Loop indices.
+
+    if(.not.this%is_sparse) return
+
+    this%is_sparse = .false.
+
+    if(allocated(this%vertex_features)) deallocate(this%vertex_features)
+    if(allocated(this%edge_features)) deallocate(this%edge_features)
+    if(allocated(this%edge_weights)) deallocate(this%edge_weights)
+
+    allocate(this%vertex(this%num_vertices))
+    allocate(this%edge(this%num_edges))
+
+    do v = 1, this%num_vertices
+       idx = this%vertex(v)%id
+       if(idx.eq.-1) idx = v
+       this%vertex(v)%feature = this%vertex_features(:,idx)
+       this%vertex(v)%id = v
+    end do
+
+    do e = 1, this%num_edges
+       idx = this%edge(e)%id
+       if(idx.eq.-1) idx = e
+       this%edge(e)%feature = this%edge_features(:,idx)
+       this%edge(e)%weight = this%edge_weights(idx)
+       this%edge(e)%id = e
+    end do
+
+    if(allocated(this%adjacency)) deallocate(this%adjacency)
+    allocate(this%adjacency(this%num_vertices, this%num_vertices))
+    this%adjacency = 0
+    do i = 1, size(this%adj_ia, dim=1)-1
+       do j = this%adj_ia(i), this%adj_ia(i+1)-1
+          this%adjacency(i,this%adj_ja(1,j)) = this%adj_ja(2,j)
+       end do
+    end do
+
+    deallocate(this%vertex_features)
+    deallocate(this%edge_features)
+    deallocate(this%edge_weights)
+    deallocate(this%adj_ia)
+    deallocate(this%adj_ja)
+
+  end subroutine convert_to_dense
 
 
   module subroutine copy(this, source, sparse)
