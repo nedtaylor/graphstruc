@@ -134,7 +134,7 @@ contains
   end function graph_type_init
 
 
-  module subroutine add_vertex(this, vertex, feature, id)
+  module subroutine add_vertex(this, vertex, feature, id, update_adjacency)
     !! Add a vertex to the graph.
     implicit none
 
@@ -147,12 +147,16 @@ contains
     !! Feature vector of the vertex.
     integer, intent(in), optional :: id
     !! Identifier of the vertex.
+    logical, intent(in), optional :: update_adjacency
+    !! Boolean whether to update the adjacency matrix. Default is True.
 
     ! Local variables
     type(vertex_type) :: vertex_
     !! Initialised vertex.
     real(real32), dimension(:,:), allocatable :: vertex_features
     !! Feature vectors of the vertices.
+    logical :: update_adjacency_
+    !! Boolean whether to update the adjacency matrix.
 
 
     if(present(vertex).and.present(feature))then
@@ -192,11 +196,15 @@ contains
        if(.not.allocated(this%vertex)) allocate(this%vertex(0))
        this%vertex = [this%vertex, vertex_]
     end if
-    call this%generate_adjacency()
+    update_adjacency_ = .true.
+    if(present(update_adjacency)) update_adjacency_ = update_adjacency
+    if(update_adjacency_) call this%generate_adjacency()
   end subroutine add_vertex
 
 
-  module subroutine add_edge(this, edge, index, weight, feature, directed, id)
+  module subroutine add_edge( &
+       this, edge, index, weight, feature, directed, id, update_adjacency &
+  )
     !! Add an edge to the graph.
     implicit none
 
@@ -215,6 +223,8 @@ contains
     !! Boolean whether the edge is directed. Default is False.
     integer, intent(in), optional :: id
     !! Identifier of the edge.
+    logical, intent(in), optional :: update_adjacency
+    !! Boolean whether to update the adjacency matrix. Default is True.
 
     ! Local variables
     class(edge_type), allocatable :: edge_
@@ -224,6 +234,8 @@ contains
     logical :: directed_
     real(real32), dimension(:,:), allocatable :: edge_features
     !! Feature vectors of the edges.
+    logical :: update_adjacency_
+    !! Boolean whether to update the adjacency matrix.
 
 
     directed_ = .false.
@@ -296,12 +308,16 @@ contains
        if(.not.allocated(this%edge)) allocate(this%edge(0))
        this%edge = [this%edge, edge_]
     end if
-    call this%generate_adjacency()
 
-    this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
-    if(.not.directed_) &
-         this%vertex(abs(edge_%index(2)))%degree = &
-              this%vertex(abs(edge_%index(2)))%degree + 1
+    update_adjacency_ = .true.
+    if(present(update_adjacency)) update_adjacency_ = update_adjacency
+    if(update_adjacency_)then
+       call this%generate_adjacency()
+       this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
+       if(.not.directed_) &
+            this%vertex(abs(edge_%index(2)))%degree = &
+                 this%vertex(abs(edge_%index(2)))%degree + 1
+    end if
 
   end subroutine add_edge
 
@@ -336,6 +352,38 @@ contains
        allocate(this%vertex(num_vertices))
     end if
   end subroutine set_num_vertices
+
+
+  module subroutine set_num_edges(this, num_edges, num_edge_features)
+    !! Set the number of edges of the graph.
+    !!
+    !! This will deallocate the existing edges and set the number of edges.
+    !! New edges will be allocated but not initialised.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, intent(in) :: num_edges
+    !! Number of edges in the graph.
+    integer, intent(in), optional :: num_edge_features
+    !! Number of edge features.
+
+    if(allocated(this%edge)) deallocate(this%edge)
+    if(allocated(this%adj_ia)) deallocate(this%adj_ia)
+    if(allocated(this%adj_ja)) deallocate(this%adj_ja)
+    if(allocated(this%adjacency)) deallocate(this%adjacency)
+    this%num_edges = num_edges
+    if(present(num_edge_features)) &
+         this%num_edge_features = num_edge_features
+    if(this%is_sparse)then
+       allocate(this%edge_features(this%num_edge_features, this%num_edges))
+       allocate(this%edge_weights(this%num_edges))
+    else
+       allocate(this%edge(num_edges))
+    end if
+
+  end subroutine set_num_edges
 
 
   module subroutine set_edges(this, vertex_index, connected_indices)
@@ -501,13 +549,16 @@ contains
   end subroutine calculate_degree
 
 
-  module subroutine generate_adjacency(this)
+  module subroutine generate_adjacency(this, index_list)
     !! Generate the adjacency matrix of the graph.
     implicit none
 
     ! Arguments
     class(graph_type), intent(inout) :: this
     !! Parent. Instance of the graph structure.
+    integer, dimension(:,:), intent(in), optional :: index_list
+    !! List of indices to be used for the adjacency matrix.
+
     integer :: i, j, k, i1, i2
     !! Loop indices.
     integer, dimension(3,this%num_vertices+2*this%num_edges) :: coo
@@ -522,6 +573,7 @@ contains
        do k = 1, this%num_edges
           i = this%edge(k)%index(1)
           j = this%edge(k)%index(2)
+          if(i.eq.0.or.j.eq.0) cycle  ! skip edges with zero index
           if(this%directed.and.j.lt.0) then
              this%adjacency(i,abs(j)) = k
           else
@@ -540,16 +592,29 @@ contains
           coo(2,i) = i
           coo(3,i) = 0
        end do
-       do i = 1, this%num_edges     ! first pass over edges (1,2)
-          coo(1,i+this%num_vertices) = this%edge(i)%index(1)
-          coo(2,i+this%num_vertices) = this%edge(i)%index(2)
-          coo(3,i+this%num_vertices) = i
-       end do
-       do i = 1, this%num_edges     ! second pass over edges (2,1)
-          coo(1,i+this%num_vertices+this%num_edges) = this%edge(i)%index(2)
-          coo(2,i+this%num_vertices+this%num_edges) = this%edge(i)%index(1)
-          coo(3,i+this%num_vertices+this%num_edges) = i
-       end do
+       if(present(index_list)) then
+          do i = 1, size(index_list, dim=2)
+             coo(1,i+this%num_vertices) = index_list(1,i)
+             coo(2,i+this%num_vertices) = index_list(2,i)
+             coo(3,i+this%num_vertices) = i
+          end do
+          do i = 1, size(index_list, dim=2)
+             coo(1,i+this%num_vertices+this%num_edges) = index_list(2,i)
+             coo(2,i+this%num_vertices+this%num_edges) = index_list(1,i)
+             coo(3,i+this%num_vertices+this%num_edges) = i
+          end do
+       else
+          do i = 1, this%num_edges     ! first pass over edges (1,2)
+             coo(1,i+this%num_vertices) = this%edge(i)%index(1)
+             coo(2,i+this%num_vertices) = this%edge(i)%index(2)
+             coo(3,i+this%num_vertices) = i
+          end do
+          do i = 1, this%num_edges     ! second pass over edges (2,1)
+             coo(1,i+this%num_vertices+this%num_edges) = this%edge(i)%index(2)
+             coo(2,i+this%num_vertices+this%num_edges) = this%edge(i)%index(1)
+             coo(3,i+this%num_vertices+this%num_edges) = i
+          end do
+       end if
        ! Step 2: sort coo array.
        do i2 = this%num_vertices+2*this%num_edges, 2, -1
           do i1 = 1, i2 - 1

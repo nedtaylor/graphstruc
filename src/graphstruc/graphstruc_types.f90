@@ -100,6 +100,8 @@ module graphstruc_types
      !! Procedure to add an edge to the graph.
      procedure, pass(this) :: set_num_vertices
      !! Procedure to set the number of vertices in the graph.
+     procedure, pass(this) :: set_num_edges
+     !! Procedure to set the number of edges in the graph.
      procedure, pass(this) :: set_edges
      !! Procedure to set the edges of the graph.
      procedure, pass(this) :: remove_vertices
@@ -177,7 +179,7 @@ module graphstruc_types
   end interface graph_type
 
   interface
-     module subroutine add_vertex(this, vertex, feature, id)
+     module subroutine add_vertex(this, vertex, feature, id, update_adjacency)
        !! Interface for adding a vertex to the graph.
        implicit none
        class(graph_type), intent(inout) :: this
@@ -188,9 +190,13 @@ module graphstruc_types
        !! Feature vector of the vertex.
        integer, intent(in), optional :: id
        !! Identifier of the vertex.
+       logical, intent(in), optional :: update_adjacency
+       !! Boolean whether to update the adjacency matrix. Default is True.
      end subroutine add_vertex
 
-     module subroutine add_edge(this, edge, index, weight, feature, directed, id)
+     module subroutine add_edge( &
+         this, edge, index, weight, feature, directed, id, update_adjacency &
+     )
        !! Interface for adding an edge to the graph.
        implicit none
        class(graph_type), intent(inout) :: this
@@ -207,6 +213,8 @@ module graphstruc_types
        !! Boolean whether the edge is directed. Default is False.
        integer, intent(in), optional :: id
        !! Identifier of the vertex.
+       logical, intent(in), optional :: update_adjacency
+       !! Boolean whether to update the adjacency matrix. Default is True.
      end subroutine add_edge
 
      module subroutine set_num_vertices(this, num_vertices, num_vertex_features)
@@ -223,6 +231,20 @@ module graphstruc_types
        integer, intent(in), optional :: num_vertex_features
        !! Number of features for the vertices. Default is 0.
      end subroutine set_num_vertices
+
+     module subroutine set_num_edges(this, num_edges, num_edge_features)
+       !! Interface for setting the number of edges of the graph.
+       !!
+       !! This will deallocate the existing edges and set the number of edges.
+       !! New edges will be allocated but not initialised.
+       implicit none
+       class(graph_type), intent(inout) :: this
+       !! Parent. Instance of the graph structure.
+       integer, intent(in) :: num_edges
+       !! Number of edges in the graph.
+       integer, intent(in), optional :: num_edge_features
+       !! Number of features for the edges. Default is 0.
+     end subroutine set_num_edges
 
      module subroutine set_edges(this, vertex_index, connected_indices)
        !! Interface for setting the edges of the graph.
@@ -271,11 +293,13 @@ module graphstruc_types
        !! Parent. Instance of the graph structure.
      end subroutine calculate_degree
 
-     module subroutine generate_adjacency(this)
+     module subroutine generate_adjacency(this, index_list)
        !! Interface for generating the adjacency matrix.
        implicit none
        class(graph_type), intent(inout) :: this
        !! Parent. Instance of the graph structure.
+       integer, dimension(:,:), intent(in), optional :: index_list
+       !! List of indices to be used for the adjacency matrix.
      end subroutine generate_adjacency
 
      module subroutine convert_to_sparse(this)
