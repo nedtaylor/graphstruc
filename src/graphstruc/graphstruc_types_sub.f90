@@ -313,7 +313,9 @@ contains
     if(present(update_adjacency)) update_adjacency_ = update_adjacency
     if(update_adjacency_)then
        call this%generate_adjacency()
-       this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
+       if(edge_%index(1).gt.0)then
+          this%vertex(edge_%index(1))%degree = this%vertex(edge_%index(1))%degree + 1
+       end if
        if(.not.directed_) &
             this%vertex(abs(edge_%index(2)))%degree = &
                  this%vertex(abs(edge_%index(2)))%degree + 1
