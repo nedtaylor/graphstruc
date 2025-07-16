@@ -643,7 +643,7 @@ contains
   end subroutine generate_adjacency
 
 
-  subroutine convert_to_sparse(this)
+  module subroutine convert_to_sparse(this)
     !! Convert the graph to a sparse representation.
     implicit none
 
@@ -710,7 +710,7 @@ contains
 
   end subroutine convert_to_sparse
 
-  subroutine convert_to_dense(this)
+  module subroutine convert_to_dense(this)
     !! Convert the graph to a dense representation.
     implicit none
 
