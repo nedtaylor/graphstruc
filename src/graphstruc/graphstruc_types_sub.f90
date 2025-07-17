@@ -60,7 +60,7 @@ contains
     !! Vertices in the graph.
     type(edge_type), dimension(:), intent(in), optional :: edge
     !! Edges in the graph.
-    character(len=128), intent(in), optional :: name
+    character(len=*), intent(in), optional :: name
     !! Name of the graph.
     logical, intent(in), optional :: directed
     !! Boolean whether the graph is directed. Default is False.

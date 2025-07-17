@@ -53,11 +53,11 @@ module graphstruc_types
      !! Boolean whether the graph is directed.
      logical :: is_sparse = .false.
      !! Boolean whether the graph is sparse
-     integer :: num_vertices= 0, num_edges = 0
+     integer :: num_vertices = 0, num_edges = 0
      !! Number of vertices and edges in the graph.
      integer :: num_vertex_features = 0, num_edge_features = 0
      !! Number of features for vertices and edges.
-     character(len=128) :: name
+     character(len=:), allocatable :: name
      !! Name of the graph.
      integer, dimension(:,:), allocatable :: adjacency
      !! Adjacency matrix of the graph, when the graph isn't sparse.
@@ -167,7 +167,7 @@ module graphstruc_types
        !! Vertices in the graph.
        type(edge_type), dimension(:), intent(in), optional :: edge
        !! Edges in the graph.
-       character(len=128), intent(in), optional :: name
+       character(len=*), intent(in), optional :: name
        !! Name of the graph.
        logical, intent(in), optional :: directed
        !! Boolean whether the graph is directed. Default is False.
