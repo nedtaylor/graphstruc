@@ -265,6 +265,7 @@ contains
           write(0,*) 'ERROR: Index is not present'
           stop "Exiting..."
        else
+          weight_ = 0._real32
           if(present(weight)) weight_ = weight
           if(present(directed))then
              directed_ = directed
