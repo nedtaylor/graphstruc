@@ -57,6 +57,10 @@ module graphstruc_types
      !! Number of vertices and edges in the graph.
      integer :: num_vertex_features = 0, num_edge_features = 0
      !! Number of features for vertices and edges.
+     integer :: num_graph_features = 0
+     !! Number of features for the graph.
+     real(real32), dimension(:), allocatable :: graph_features
+     !! Feature vector of the graph.
      character(len=:), allocatable :: name
      !! Name of the graph.
      integer, dimension(:,:), allocatable :: adjacency
