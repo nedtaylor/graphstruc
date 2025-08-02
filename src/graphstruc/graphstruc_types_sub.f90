@@ -518,6 +518,140 @@ contains
     if(update_adjacency_) call this%generate_adjacency()
   end subroutine remove_edges
 
+  module subroutine add_self_loops(this, indices, weight, features)
+    !! Interface for adding self-loops to the graph.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, dimension(:), intent(in), optional :: indices
+    !! Indices of the vertices to which self-loops are added.
+    real(real32), intent(in), optional :: weight
+    !! Weight of the self-loop. Default is 1.0.
+    real(real32), dimension(:), intent(in), optional :: features
+    !! Feature vector of the self-loop. Default is empty.
+
+    ! Local variables
+    integer :: i
+    !! Loop index.
+    real(real32) :: weight_
+    !! Weight of the self-loop.
+    real(real32), dimension(:), allocatable :: features_
+    !! Feature vector of the self-loop.
+
+    if(.not.allocated(this%vertex)) then
+       write(0,*) 'ERROR: Graph has no vertices to add self-loops'
+       stop "Exiting..."
+    end if
+    if(present(features))then
+       if(size(feature, dim=1) .ne. 1 .and. &
+            size(feature, dim=1) .ne. this%num_edge_features &
+       )then
+         write(0,*) 'ERROR: Feature vector size does not match edge features'
+         stop "Exiting..."
+       end if
+       features_ = features
+    else
+       allocate(features_(this%num_edge_features), source = 0._real32)
+    end if
+
+    weight_ = 1._real32
+    if(present(weight)) weight_ = weight
+
+    if(present(indices))then
+       do i = 1, size(indices, dim=1)
+          if(indices(i) .gt. 0 .and. indices(i) .le. this%num_vertices)then
+             !! check if self-loop is already present
+             if(this%is_sparse.and.allocated(this%adj_ja))then
+                if( any( &
+                     this%adj_ja(1, &
+                          this%adj_ia(indices(i)):this%adj_ia(indices(i)+1)-1 &
+                     ) .eq. indices(i) &
+                ) ) then
+                   write(0,*) 'Self-loop already exists for vertex', indices(i)
+                   cycle
+                end if
+             elseif(.allocated(this%adjacency))then
+                if(this%adjacency(indices(i), indices(i)) .ne. 0) then
+                   write(0,*) 'Self-loop already exists for vertex', indices(i)
+                   cycle
+                end if
+             end if
+             call this%add_edge( &
+                  index=[indices(i), indices(i)], &
+                  weight=weight_, &
+                  feature=features_, &
+                  update_adjacency=.false. &
+             )
+          else
+             write(0,*) 'ERROR: Index out of bounds for self-loop'
+             stop "Exiting..."
+          end if
+       end do
+    else
+       do i = 1, this%num_vertices
+          if(this%is_sparse.and.allocated(this%adj_ja))then
+             if(any(this%adj_ja(1,this%adj_ia(i):this%adj_ia(i+1)-1) .eq. i)) then
+                write(0,*) 'Self-loop already exists for vertex', i
+                cycle
+             end if
+          elseif(.allocated(this%adjacency))then
+             if(this%adjacency(i, i) .ne. 0) then
+                write(0,*) 'Self-loop already exists for vertex', indices(i)
+                cycle
+             end if
+          end if
+          call this%add_edge( &
+               index=[i, i], &
+               weight=weight_, &
+               feature=features_, &
+               update_adjacency=.false. &
+          )
+       end do
+    end if
+    if((this%is_sparse.and.allocated(this%adj_ja)).or.allocated(this%adjacency))then
+       call this%update_adjacency()
+    end if
+    this%has_self_loops = .true.
+
+  end subroutine add_self_loops
+
+  module subroutine remove_self_loops(this, indices)
+    !! Remove self-loops from the graph.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+    integer, dimension(:), intent(in), optional :: indices
+    !! Indices of the vertices from which self-loops are removed.
+
+    ! Local variables
+      integer :: i, j
+      !! Loop indices.
+
+      if(this%num_edges .eq. 0) then
+         write(0,*) 'No edges to remove self-loops from'
+         return
+      end if
+
+      do i = 1, this%num_edges
+         if(this%edge(i)%index(1) .eq. this%edge(i)%index(2)) then
+            if(present(indices))then
+               if(all(this%edge(i)%index(1) .ne. indices)) then
+                  cycle
+               end if
+            end if
+            ! Remove self-loop edge
+            call this%remove_edges([i], update_adjacency=.false.)
+            i = i - 1  ! Adjust index after removal
+         end if
+      end do
+      this%has_self_loops = .false.
+
+  end subroutine remove_self_loops
+
 
   module subroutine calculate_degree(this)
     !! Calculate the degree of the vertices in the graph.
@@ -588,13 +722,17 @@ contains
        if(allocated(this%adj_ia)) deallocate(this%adj_ia)
        if(allocated(this%adj_ja)) deallocate(this%adj_ja)
        allocate(this%adj_ia(this%num_vertices+1))
-       allocate(this%adj_ja(2,this%num_vertices+2*this%num_edges))
+       if(this%has_self_loops)then
+          allocate(this%adj_ja(2,2*this%num_edges - this%num_vertices))
+       else
+          allocate(this%adj_ja(2,2*this%num_edges))
+       end if
        ! Step 1: edgelist to coo array.
-       do i = 1, this%num_vertices  ! vertices interacting with themselves
-          coo(1,i) = i
-          coo(2,i) = i
-          coo(3,i) = 0
-       end do
+       !  do i = 1, this%num_vertices  ! vertex self-loops
+       !     coo(1,i) = i
+       !     coo(2,i) = i
+       !     coo(3,i) = 0
+       !  end do
        if(present(index_list)) then
           do i = 1, size(index_list, dim=2)
              coo(1,i+this%num_vertices) = index_list(1,i)
@@ -613,6 +751,7 @@ contains
              coo(3,i+this%num_vertices) = i
           end do
           do i = 1, this%num_edges     ! second pass over edges (2,1)
+             if(this%edge(i)%index(1).eq.this%edge(i)%index(2)) cycle ! skip self-loops
              coo(1,i+this%num_vertices+this%num_edges) = this%edge(i)%index(2)
              coo(2,i+this%num_vertices+this%num_edges) = this%edge(i)%index(1)
              coo(3,i+this%num_vertices+this%num_edges) = i

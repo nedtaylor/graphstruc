@@ -53,6 +53,8 @@ module graphstruc_types
      !! Boolean whether the graph is directed.
      logical :: is_sparse = .false.
      !! Boolean whether the graph is sparse
+     logical :: has_self_loops = .false.
+     !! Boolean whether the graph has self-loops.
      integer :: num_vertices = 0, num_edges = 0
      !! Number of vertices and edges in the graph.
      integer :: num_vertex_features = 0, num_edge_features = 0
@@ -112,6 +114,10 @@ module graphstruc_types
      !! Procedure to remove a vertex from the graph.
      procedure, pass(this) :: remove_edges
      !! Procedure to remove an edge from the graph.
+     procedure, pass(this) :: add_self_loops
+     !! Procedure to add self-loops to the graph.
+     procedure, pass(this) :: remove_self_loops
+     !! Procedure to remove self-loops from the graph.
      procedure, pass(this) :: calculate_degree
      !! Procedure to calculate the degree of the vertices.
      procedure, pass(this) :: generate_adjacency
@@ -289,6 +295,28 @@ module graphstruc_types
        logical, intent(in), optional :: update_adjacency
        !! Boolean whether to update the adjacency matrix. Default is True.
      end subroutine remove_edges
+
+     module subroutine add_self_loops(this, indices, weight, features)
+       !! Interface for adding self-loops to the graph.
+       implicit none
+       class(graph_type), intent(inout) :: this
+       !! Parent. Instance of the graph structure.
+       integer, dimension(:), intent(in), optional :: indices
+       !! Indices of the vertices to which self-loops are added.
+       real(real32), intent(in), optional :: weight
+       !! Weight of the self-loop. Default is 1.0.
+       real(real32), dimension(:), intent(in), optional :: features
+       !! Feature vector of the self-loop. Default is empty.
+     end subroutine add_self_loops
+
+     module subroutine remove_self_loops(this, indices)
+       !! Interface for removing self-loops from the graph.
+       implicit none
+       class(graph_type), intent(inout) :: this
+       !! Parent. Instance of the graph structure.
+       integer, dimension(:), intent(in), optional :: indices
+       !! Indices of the vertices from which self-loops are removed.
+     end subroutine remove_self_loops
 
      module subroutine calculate_degree(this)
        !! Interface for calculating the degree of the vertices.
