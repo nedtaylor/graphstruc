@@ -298,6 +298,7 @@ contains
 
     if(present(id)) edge_%id = id
 
+    if(.not.allocated(this%edge)) allocate(this%edge(0))
     this%num_edges = this%num_edges + 1
     if(this%is_sparse)then
        allocate(edge_features(this%num_edge_features,this%num_edges))
@@ -305,8 +306,9 @@ contains
        edge_features(:,this%num_edges) = edge_%feature
        if(allocated(this%edge_features)) deallocate(this%edge_features)
        call move_alloc(edge_features, this%edge_features)
+       deallocate(edge_%feature)
+       this%edge = [this%edge, edge_]
     else
-       if(.not.allocated(this%edge)) allocate(this%edge(0))
        this%edge = [this%edge, edge_]
     end if
 
@@ -540,7 +542,7 @@ contains
     real(real32), dimension(:), allocatable :: features_
     !! Feature vector of the self-loop.
 
-    if(.not.allocated(this%vertex)) then
+    if(.not.allocated(this%vertex).and..not.allocated(this%vertex_features))then
        write(0,*) 'ERROR: Graph has no vertices to add self-loops'
        stop "Exiting..."
     end if
@@ -610,10 +612,10 @@ contains
           )
        end do
     end if
+    this%has_self_loops = .true.
     if((this%is_sparse.and.allocated(this%adj_ja)).or.allocated(this%adjacency))then
        call this%generate_adjacency()
     end if
-    this%has_self_loops = .true.
 
   end subroutine add_self_loops
 
@@ -695,7 +697,7 @@ contains
     integer, dimension(:,:), intent(in), optional :: index_list
     !! List of indices to be used for the adjacency matrix.
 
-    integer :: i, j, k, i1, i2
+    integer :: i, j, k, i1, i2, num_edges
     !! Loop indices.
     integer, dimension(3,this%num_vertices+2*this%num_edges) :: coo
     !! sparse adjacency in coordinate format (coo)
@@ -717,15 +719,17 @@ contains
              this%adjacency(abs(j),i) = k
           end if
        end do
-    else if( this%is_sparse .and. ( .not. this%directed ) )then  ! graph is sparse and not directed; allocate and fill arrays adj_ia and adj_ja.
+    else
        if(allocated(this%adj_ia)) deallocate(this%adj_ia)
        if(allocated(this%adj_ja)) deallocate(this%adj_ja)
        allocate(this%adj_ia(this%num_vertices+1))
-       if(this%has_self_loops)then
-          allocate(this%adj_ja(2,2*this%num_edges - this%num_vertices))
+       if(this%directed)then
+          num_edges = this%num_edges
        else
-          allocate(this%adj_ja(2,2*this%num_edges))
+          num_edges = 2*this%num_edges
+          if(this%has_self_loops) num_edges = num_edges - this%num_vertices
        end if
+       allocate(this%adj_ja(2, num_edges))
        ! Step 1: edgelist to coo array.
        !  do i = 1, this%num_vertices  ! vertex self-loops
        !     coo(1,i) = i
@@ -734,30 +738,39 @@ contains
        !  end do
        if(present(index_list)) then
           do i = 1, size(index_list, dim=2)
-             coo(1,i+this%num_vertices) = index_list(1,i)
-             coo(2,i+this%num_vertices) = index_list(2,i)
-             coo(3,i+this%num_vertices) = i
+             coo(1,i) = index_list(1,i)
+             coo(2,i) = index_list(2,i)
+             coo(3,i) = i
           end do
-          do i = 1, size(index_list, dim=2)
-             coo(1,i+this%num_vertices+this%num_edges) = index_list(2,i)
-             coo(2,i+this%num_vertices+this%num_edges) = index_list(1,i)
-             coo(3,i+this%num_vertices+this%num_edges) = i
-          end do
+          j = this%num_edges
+          if(.not.this%directed) then
+             do i = 1, size(index_list, dim=2)
+                if(index_list(1,i).eq.index_list(2,i)) cycle ! skip self-loops
+                j = j + 1
+                coo(1,j) = index_list(2,i)
+                coo(2,j) = index_list(1,i)
+                coo(3,j) = i
+             end do
+          end if
        else
           do i = 1, this%num_edges     ! first pass over edges (1,2)
-             coo(1,i+this%num_vertices) = this%edge(i)%index(1)
-             coo(2,i+this%num_vertices) = this%edge(i)%index(2)
-             coo(3,i+this%num_vertices) = i
+             coo(1,i) = this%edge(i)%index(1)
+             coo(2,i) = this%edge(i)%index(2)
+             coo(3,i) = i
           end do
-          do i = 1, this%num_edges     ! second pass over edges (2,1)
-             if(this%edge(i)%index(1).eq.this%edge(i)%index(2)) cycle ! skip self-loops
-             coo(1,i+this%num_vertices+this%num_edges) = this%edge(i)%index(2)
-             coo(2,i+this%num_vertices+this%num_edges) = this%edge(i)%index(1)
-             coo(3,i+this%num_vertices+this%num_edges) = i
-          end do
+          if(.not.this%directed) then
+             j = this%num_edges
+             do i = 1, this%num_edges     ! second pass over edges (2,1)
+                if(this%edge(i)%index(1).eq.this%edge(i)%index(2)) cycle ! skip self-loops
+                j = j + 1
+                coo(1,j) = this%edge(i)%index(2)
+                coo(2,j) = this%edge(i)%index(1)
+                coo(3,j) = i
+             end do
+          end if
        end if
        ! Step 2: sort coo array.
-       do i2 = this%num_vertices+2*this%num_edges, 2, -1
+       do i2 = num_edges, 2, -1
           do i1 = 1, i2 - 1
              if ( ( coo(1,i1) .gt. ( coo(1,i2) ) ) .or. &
                   ( ( coo(1,i1) .eq. coo(1,i2) ) .and. ( coo(2,i1) .gt. coo(2,i2)  ) ) ) then
@@ -769,14 +782,11 @@ contains
        end do
        ! Step 3: sorted coo array to adj_ia and adj_ja arrays.
        this%adj_ia(1) = 1
-       do i = 1, this%num_vertices+2*this%num_edges
+       do i = 1, num_edges
           this%adj_ja(1,i) = coo(2,i)
           this%adj_ja(2,i) = coo(3,i)
           this%adj_ia(coo(1,i)+1) = i + 1
        end do
-    else  ! graph is sparse and directed
-       write(0,*) 'ERROR: Case of sparse and directed graph NOT IMPLEMENTED!'
-       stop "Exiting..."
     end if
 
   end subroutine generate_adjacency
