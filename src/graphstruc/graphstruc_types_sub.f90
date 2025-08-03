@@ -545,8 +545,8 @@ contains
        stop "Exiting..."
     end if
     if(present(features))then
-       if(size(feature, dim=1) .ne. 1 .and. &
-            size(feature, dim=1) .ne. this%num_edge_features &
+       if(size(features, dim=1) .ne. 1 .and. &
+            size(features, dim=1) .ne. this%num_edge_features &
        )then
          write(0,*) 'ERROR: Feature vector size does not match edge features'
          stop "Exiting..."
@@ -572,7 +572,7 @@ contains
                    write(0,*) 'Self-loop already exists for vertex', indices(i)
                    cycle
                 end if
-             elseif(.allocated(this%adjacency))then
+             elseif(allocated(this%adjacency))then
                 if(this%adjacency(indices(i), indices(i)) .ne. 0) then
                    write(0,*) 'Self-loop already exists for vertex', indices(i)
                    cycle
@@ -596,7 +596,7 @@ contains
                 write(0,*) 'Self-loop already exists for vertex', i
                 cycle
              end if
-          elseif(.allocated(this%adjacency))then
+          elseif(allocated(this%adjacency))then
              if(this%adjacency(i, i) .ne. 0) then
                 write(0,*) 'Self-loop already exists for vertex', indices(i)
                 cycle
@@ -611,7 +611,7 @@ contains
        end do
     end if
     if((this%is_sparse.and.allocated(this%adj_ja)).or.allocated(this%adjacency))then
-       call this%update_adjacency()
+       call this%generate_adjacency()
     end if
     this%has_self_loops = .true.
 
@@ -636,7 +636,7 @@ contains
          return
       end if
 
-      do i = 1, this%num_edges
+      do i = this%num_edges, 1, -1
          if(this%edge(i)%index(1) .eq. this%edge(i)%index(2)) then
             if(present(indices))then
                if(all(this%edge(i)%index(1) .ne. indices)) then
@@ -645,7 +645,6 @@ contains
             end if
             ! Remove self-loop edge
             call this%remove_edges([i], update_adjacency=.false.)
-            i = i - 1  ! Adjust index after removal
          end if
       end do
       this%has_self_loops = .false.
