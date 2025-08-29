@@ -227,7 +227,7 @@ contains
     !! Boolean whether to update the adjacency matrix. Default is True.
 
     ! Local variables
-    class(edge_type), allocatable :: edge_
+    type(edge_type) :: edge_
     !! Initialised edge.
     real(real32) :: weight_
     !! Weight of the edge.
