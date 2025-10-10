@@ -4,7 +4,7 @@ module graphstruc_types
   !! The module provides a derived type implementation for graph structures.
   !! Sparse storage implemented using Compressed Sparse Row (CSR) format.
   !! Sparse adjacency implemented by Artan Qerushi.
-  use graphstruc_kinds, only: real32
+  use coreutils, only: real32
   implicit none
 
   private
