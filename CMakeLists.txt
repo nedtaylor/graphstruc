@@ -7,7 +7,6 @@ execute_process(COMMAND pwd OUTPUT_VARIABLE CURRENT_WORKING_DIR OUTPUT_STRIP_TRA
 message("Current working directory: ${CURRENT_WORKING_DIR}")
 set( CMAKE_BUILD_PREFIX ${CURRENT_WORKING_DIR}
   CACHE STRING "Select where to build the library." )
-set(MODULE_DIR ${CMAKE_BUILD_PREFIX}/mod)
 
 # set the project name
 project(graphstruc NONE)
@@ -17,7 +16,7 @@ set( LIB_NAME ${PROJECT_NAME} )
 set( PROJECT_DESCRIPTION
   "Fortran neural network" )
 set( PROJECT_URL "https://github.com/nedtaylor/graphstruc" )
-set( CMAKE_CONFIGURATION_TYPES "Release" "Parallel" "Serial" "Dev" "Debug"
+set( CMAKE_CONFIGURATION_TYPES "Release" "Parallel" "Serial" "Dev" "Debug" "Parallel_Dev"
   CACHE STRING "List of configurations types." )
 set( CMAKE_BUILD_TYPE "Release"
   CACHE STRING "Select which configuration to build." )
@@ -36,13 +35,6 @@ set(CMAKE_Fortran_STANDARD 2018)
 # set language
 enable_language(Fortran)
 
-# get the user's home directory
-set(HOME_DIR $ENV{HOME})
-
-# set options for building tests and examples
-option(BUILD_TESTS "Build the unit tests" ON)
-option(BUILD_EXAMPLES "Build the examples" ON)
-
 # set coverage compiler flags
 if (CMAKE_BUILD_TYPE MATCHES "Debug*" OR CMAKE_BUILD_TYPE MATCHES "Dev*")
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -56,32 +48,49 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug*" OR CMAKE_BUILD_TYPE MATCHES "Dev*")
   endif()
 endif()
 
-# enable testing
+# set up the coreutils dependency
+include(FetchContent)
+# Disable testing for dependencies - both standard variables
+set(BUILD_TESTING OFF)
+set(BUILD_TESTS OFF)
+FetchContent_Declare(
+    coreutils
+    GIT_REPOSITORY https://github.com/nedtaylor/coreutils.git
+    GIT_TAG        main
+    FIND_PACKAGE_ARGS NAMES coreutils
+)
+FetchContent_MakeAvailable(coreutils)
+# Re-enable BUILD_TESTS for our project
+set(BUILD_TESTS ON)
+find_package(coreutils REQUIRED)
+
+message(STATUS "coreutils home directory: ${coreutils_DIR}")
+message(STATUS "coreutils include directory: ${coreutils_INCLUDE_DIRS}")
+message(STATUS "coreutils source directory: ${coreutils_BUILD_DIRS}")
+
+# Enable testing for THIS project only, after dependencies are loaded
 enable_testing()
 
-# set the output directories
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+# set options for building tests and examples
+option(BUILD_TESTS "Build the unit tests" ON)
+option(BUILD_EXAMPLES "Build the examples" ON)
 
 # Define the sources
 set(SRC_DIR src)
 set(LIB_DIR ${SRC_DIR}/graphstruc)
+# Automatically find all Fortran files in lib/
+file(GLOB LIB_FILES "${LIB_DIR}/*.f90")
 
-set(LIB_FILES
-    graphstruc_kinds.f90
-    graphstruc_types.f90
-    graphstruc_types_sub.f90
-)
-foreach(lib ${LIB_FILES})
-    list(APPEND PREPENDED_LIB_FILES ${LIB_DIR}/${lib})
-endforeach()
+# Collect the main source file
+file(GLOB SRC_FILES "${SRC_DIR}/*.f90")
 
-set(SRC_FILES
-    graphstruc.f90
-)
-foreach(src ${SRC_FILES})
-    list(APPEND PREPENDED_SRC_FILES ${SRC_DIR}/${src})
-endforeach()
+# Combine all source files
+set(ALL_SOURCES ${SRC_FILES} ${LIB_FILES})
 
+# Optional: print for debugging
+message(STATUS "LIB_FILES: ${LIB_FILES}")
+message(STATUS "SRC_FILES: ${SRC_FILES}")
+message(STATUS "ALL_SOURCES: ${ALL_SOURCES}")
 
 # initialise flags
 set(CPPFLAGS "")
@@ -106,7 +115,6 @@ if (CMAKE_Fortran_COMPILER MATCHES ".*gfortran.*" OR CMAKE_Fortran_COMPILER MATC
     set(MEMFLAGS -mcmodel=large)
     set(OPTIMFLAGS -O3 -march=native)
     set(FASTFLAGS -Ofast -march=native)
-    set(PYTHONFLAGS -c -O3 -fPIC)
 elseif (CMAKE_Fortran_COMPILER MATCHES ".*nag.*")
     message(STATUS "Using nag compiler")
     set(PPFLAGS -f2018 -fpp)
@@ -132,15 +140,12 @@ else()
     message(STATUS "Using a different Fortran compiler")
 endif()
 
-
-
-
-
 set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${PPFLAGS}")
 
 
 # create the library
-add_library(${PROJECT_NAME} STATIC ${PREPENDED_LIB_FILES} ${PREPENDED_SRC_FILES})
+add_library(${PROJECT_NAME} STATIC ${ALL_SOURCES})
+set(MODULE_DIR ${CMAKE_BUILD_PREFIX}/mod)
 set_target_properties(${PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC)
 
@@ -157,9 +162,12 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Parallel>:${OPTIMFLAGS
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Parallel>:${MPFLAGS}>")
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>")
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Parallel_Dev>:${MPFLAGS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Parallel_Dev>:${DEVFLAGS}>")
 
-
+# add library dependencies
+add_dependencies(${PROJECT_NAME} coreutils)
+target_link_libraries(${PROJECT_NAME} coreutils)
 
 # include the build test directory
 if(BUILD_TESTS)
@@ -167,9 +175,8 @@ if(BUILD_TESTS)
 endif()
 
 # add coverage compiler flags
-if ( ( CMAKE_Fortran_COMPILER MATCHES ".*gfortran.*" OR CMAKE_Fortran_COMPILER MATCHES ".*gcc.*" ) AND 
+if ( ( CMAKE_Fortran_COMPILER MATCHES ".*gfortran.*" OR CMAKE_Fortran_COMPILER MATCHES ".*gcc.*" ) AND
      ( CMAKE_BUILD_TYPE MATCHES "Debug*" OR CMAKE_BUILD_TYPE MATCHES "Dev*" ) )
-
     append_coverage_compiler_flags()
 
     # Copy test data files
