@@ -956,4 +956,38 @@ contains
     end if
   end subroutine copy
 
+
+  module subroutine clear(this)
+    !! Clear all data from the graph.
+    !!
+    !! This deallocates all arrays and resets all variables to their default values.
+    implicit none
+
+    ! Arguments
+    class(graph_type), intent(inout) :: this
+    !! Parent. Instance of the graph structure.
+
+    ! Deallocate all allocatable arrays
+    if(allocated(this%graph_features)) deallocate(this%graph_features)
+    if(allocated(this%name)) deallocate(this%name)
+    if(allocated(this%adjacency)) deallocate(this%adjacency)
+    if(allocated(this%adj_ia)) deallocate(this%adj_ia)
+    if(allocated(this%adj_ja)) deallocate(this%adj_ja)
+    if(allocated(this%edge_weights)) deallocate(this%edge_weights)
+    if(allocated(this%vertex_features)) deallocate(this%vertex_features)
+    if(allocated(this%edge_features)) deallocate(this%edge_features)
+    if(allocated(this%vertex)) deallocate(this%vertex)
+    if(allocated(this%edge)) deallocate(this%edge)
+
+    ! Reset all scalar variables to default values
+    this%directed = .false.
+    this%is_sparse = .false.
+    this%has_self_loops = .false.
+    this%num_vertices = 0
+    this%num_edges = 0
+    this%num_vertex_features = 0
+    this%num_edge_features = 0
+    this%num_graph_features = 0
+  end subroutine clear
+
 end submodule graphstruc_types_submodule

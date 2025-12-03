@@ -128,6 +128,8 @@ module graphstruc_types
      !! Procedure to convert the graph to a dense representation.
      procedure, pass(this) :: copy
      !! Procedure to copy the graph.
+     procedure, pass(this) :: clear
+     !! Procedure to clear all data from the graph.
   end type graph_type
 
   interface vertex_type
@@ -358,6 +360,13 @@ module graphstruc_types
        logical, intent(in), optional :: sparse
        !! Boolean whether to copy the graph as sparse. Default is False.
      end subroutine copy
+
+     module subroutine clear(this)
+       !! Interface for clearing all data from the graph.
+       implicit none
+       class(graph_type), intent(inout) :: this
+       !! Parent. Instance of the graph structure.
+     end subroutine clear
   end interface
 
 end module graphstruc_types
