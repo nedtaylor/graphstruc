@@ -9,3 +9,11 @@ obj/
 build/
 doc/html
 settings.json
+.local-pre-commit-config.yaml
+docs/html
+docs/ford
+docs/source/_static/ford
+*.html
+*.ttf
+BACKUP_DOCS_SOURCE
+docs/build

@@ -11,6 +11,9 @@ suffixes = ["F90", "f90"]
 [library]
 source-dir="src"
 
+[dependencies]
+coreutils = { git = "https://github.com/nedtaylor/coreutils" }
+
 [fortran]
 implicit-typing = false
 implicit-external = false

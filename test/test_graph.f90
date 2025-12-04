@@ -199,6 +199,27 @@ program test_graph
      success = .false.
   end if
 
+  !-----------------------------------------------------------------------------
+  ! test clear
+  !-----------------------------------------------------------------------------
+  call graph%clear()
+  if(graph%num_vertices .ne. 0)then
+     write(0,*) 'Graph clear failed for num_vertices'
+     success = .false.
+  end if
+  if(allocated(graph%vertex))then
+     write(0,*) 'Graph clear failed for vertex'
+     success = .false.
+  end if
+  if(graph%num_edges .ne. 0)then
+     write(0,*) 'Graph clear failed for num_edges'
+     success = .false.
+  end if
+  if(allocated(graph%edge))then
+     write(0,*) 'Graph clear failed for edge'
+     success = .false.
+  end if
+
 
   !-----------------------------------------------------------------------------
   ! check for any failed tests
