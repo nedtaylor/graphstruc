@@ -17,3 +17,4 @@ docs/source/_static/ford
 *.ttf
 BACKUP_DOCS_SOURCE
 docs/build
+*.pyc
