@@ -1,5 +1,5 @@
 name = "graphstruc"
-version = "0.1.1"
+version = "0.2.1"
 author = "Ned Thaddeus Taylor"
 maintainer = "n.t.taylor@exeter.ac.uk"
 description = "A Fortran library for graph structures"
