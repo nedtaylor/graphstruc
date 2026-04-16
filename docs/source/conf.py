@@ -7,8 +7,23 @@ import sys
 import subprocess
 import shutil
 
+
+def env_truthy(name):
+    """Return True when an environment variable is set to a truthy value."""
+    return os.environ.get(name, "").strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+
+
 def run_ford(app):
     """Run FORD to generate Fortran API documentation"""
+    if env_truthy("GRAPHSTRUC_SKIP_FORD") or env_truthy("SKIP_FORD"):
+        print(
+            "Skipping FORD documentation generation because "
+            "GRAPHSTRUC_SKIP_FORD or SKIP_FORD is set"
+        )
+        return
+
     ford_dir = os.path.abspath(os.path.join(app.confdir, "..", ".."))
     ford_otuput = os.path.join(app.confdir, "_static", "ford")
     project_file = os.path.join(ford_dir, "ford.md")
@@ -55,7 +70,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'sphinx_rtd_theme',
     'sphinx.ext.extlinks',
     'sphinx_copybutton'
 ]
@@ -70,8 +84,6 @@ intersphinx_mapping = {
 }
 intersphinx_disabled_domains = ['std']
 
-templates_path = ['_templates']
-
 exclude_patterns = ['_build', '.DS_Store', 'build']
 
 # -- Search aliases extension
@@ -82,29 +94,21 @@ extensions.append('spelling_aliases')
 
 # -- Options for HTML output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
+
+templates_path = ['_templates']
 
 # Add path for static files (will include FORD output)
 html_static_path = ['_static']
 html_css_files = [
-    "custom.css"
+    "custom.css",
 ]
 
 html_theme_options = {
-    'logo_only': False,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'vcs_pageview_mode': '',
-    # 'style_nav_header_background': 'white',
-    'flyout_display': 'hidden',
-    'version_selector': True,
-    'language_selector': True,
-    # Toc options
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False,
+    "top_of_page_buttons": [ "view", "edit" ],
+    "source_repository": "https://github.com/nedtaylor/graphstruc/",
+    "source_branch": git_branch,
+    "source_directory": "docs/source/",
 }
 
 
@@ -112,8 +116,9 @@ html_context = {
     "display_github": True,
     "github_repo": "graphstruc",
     "github_user": "nedtaylor",
-    "github_version": "main",
-    "conf_py_path": "/docs/source/",
+    "github_version": git_branch,
+    "conf_py_path": "docs/source/",
+    "page_source_suffix": ".rst",
 }
 
 # -- Options for EPUB output

@@ -40,3 +40,9 @@ p.rubric > .h3 {
     text-transform: none !important;
     color: inherit !important;
 }
+
+.content-icon-container .github-this-page svg {
+    color: inherit;
+    height: 1.25rem;
+    width: 1.25rem;
+}

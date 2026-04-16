@@ -18,3 +18,5 @@ docs/source/_static/ford
 BACKUP_DOCS_SOURCE
 docs/build
 *.pyc
+_build/
+.DS_Store
